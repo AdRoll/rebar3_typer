@@ -44,7 +44,7 @@ Usage: rebar3 typer [-r <recursive>] [--show [<show>]]
   --show                  Print type specifications for all functions on
                           stdout. [default: true]
   --show-exported         Same as --show, but print specifications for
-                          exported functions only.Specs are displayed
+                          exported functions only. Specs are displayed
                           sorted alphabetically on the function's name.
                           [default: false]
   --show_exported         Same as --show-exported. [default: false]
@@ -72,7 +72,7 @@ Usage: rebar3 typer [-r <recursive>] [--show [<show>]]
                           can be specified.)
 ```
 
-You can also put those options directly in your `rebar.config` file…
+You can also put those options directly in your `rebar.config` file:
 
 ```erlang
 {typer,
