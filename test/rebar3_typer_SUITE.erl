@@ -2,7 +2,6 @@
 
 -behaviour(ct_suite).
 
--include_lib("common_test/include/ct.hrl").
 -include_lib("stdlib/include/assert.hrl"). % Assertion macros for convenience
 
 -export([all/0, groups/0, init_per_testcase/2, end_per_testcase/2]).

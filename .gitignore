@@ -1,3 +1,4 @@
+doc/
 .eunit
 *.o
 *.beam
