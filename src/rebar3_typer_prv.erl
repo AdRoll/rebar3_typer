@@ -11,6 +11,7 @@
 
 -define(PROVIDER, typer).
 -define(OPTS, %% TODO: consider adding shorthand version to some (or all) options, even if it doesn't exist on TypEr itself
+        %% list of {Name,  ShortOpt,  LongOpt,    ArgSpec,   HelpMsg}
         [{recursive,
           undefined,
           "recursive",
@@ -54,7 +55,7 @@
          {version,
           $v,
           "version",
-          string,
+          undefined,
           "Print the TypEr version and some more information and exit."}]).
 
 %% =============================================================================
