@@ -9,8 +9,6 @@
               {rebar_state, add_provider, 2},
               {rebar_state, command_parsed_args, 1}]).
 
--define(PROVIDER, typer).
-
 %% =============================================================================
 %% Public API
 %% =============================================================================
@@ -18,12 +16,12 @@
 -spec init(rebar_state:t()) -> {ok, rebar_state:t()}.
 init(State) ->
     Provider =
-        providers:create([{name, ?PROVIDER}, % The 'user friendly' name of the task
-                          {module, ?MODULE}, % The module implementation of the task
-                          {bare, true},      % The task can be run by the user, always true
-                          {deps, []},        % The list of dependencies
-                          {example, "rebar3 typer"}, % How to use the plugin
-                          {opts, opts()},    % list of options understood by the plugin
+        providers:create([{name, typer},
+                          {module, ?MODULE},
+                          {bare, true}, % The task can be run by the user, always true
+                          {deps, []},
+                          {example, "rebar3 typer"},
+                          {opts, opts()},
                           {short_desc, "Execute TypEr on your code"},
                           {desc, "Execute TypEr on your code"}]),
     {ok, rebar_state:add_provider(State, Provider)}.
@@ -34,9 +32,10 @@ do(State) ->
         rebar_api:info("Looking for types to add...", []),
         CmdLineOpts = parse_opts(State),
         RebarConfigOpts = parse_rebar_config(State),
-        Opts = maps:merge(RebarConfigOpts, CmdLineOpts),
+        Merged = maps:merge(RebarConfigOpts, CmdLineOpts),
+        Opts = default_mode_show(Merged),
         ok = rebar_api:debug("Opts: ~p", [Opts]),
-        {error, {?MODULE, not_implemented}}
+        rebar3_mini_typer:run(Opts, State)
     catch
         error:{unrecognized_opt, Opt} ->
             {error, {?MODULE, {unrecognized_opt, Opt}}}
@@ -47,6 +46,9 @@ format_error(not_implemented) ->
     io_lib:format("Not yet implemented.", []);
 format_error({unrecognized_opt, Opt}) ->
     io_lib:format("Unrecognized option in rebar.config: ~p", [Opt]);
+format_error({colliding_modes, NewMode, OldMode}) ->
+    io_lib:format("Mode was previously set to '~p'; cannot set it to '~p' now",
+                  [OldMode, NewMode]);
 format_error(Reason) ->
     io_lib:format("~p", [Reason]).
 
@@ -61,17 +63,17 @@ parse_opts(State) ->
 parse_cli_opts([], Acc) ->
     Acc;
 parse_cli_opts([{recursive, Dirs} | T], Acc) ->
-    parse_cli_opts(T, Acc#{recursive => split_string(Dirs)});
+    parse_cli_opts(T, Acc#{files_r => split_string(Dirs)});
 parse_cli_opts([{show, Bool} | T], Acc) ->
-    parse_cli_opts(T, Acc#{show => Bool});
+    parse_cli_opts(T, set_mode(show, Bool, Acc));
 parse_cli_opts([{show_exported, Bool} | T], Acc) ->
-    parse_cli_opts(T, Acc#{show_exported => Bool});
-parse_cli_opts([{show_success_typings, Bool} | T], Acc) ->
-    parse_cli_opts(T, Acc#{show_success_typings => Bool});
+    parse_cli_opts(T, set_mode(show_exported, Bool, Acc));
 parse_cli_opts([{annotate, Bool} | T], Acc) ->
-    parse_cli_opts(T, Acc#{annotate => Bool});
+    parse_cli_opts(T, set_mode(annotate, Bool, Acc));
 parse_cli_opts([{annotate_inc_files, Bool} | T], Acc) ->
-    parse_cli_opts(T, Acc#{annotate_inc_files => Bool});
+    parse_cli_opts(T, set_mode(annotate_inc_files, Bool, Acc));
+parse_cli_opts([{show_success_typings, Bool} | T], Acc) ->
+    parse_cli_opts(T, Acc#{show_succ => Bool});
 parse_cli_opts([{no_spec, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{no_spec => Bool});
 parse_cli_opts([{edoc, Bool} | T], Acc) ->
@@ -79,16 +81,37 @@ parse_cli_opts([{edoc, Bool} | T], Acc) ->
 parse_cli_opts([{plt, PltFile} | T], Acc) ->
     parse_cli_opts(T, Acc#{plt => PltFile});
 parse_cli_opts([{typespec_files, Files} | T], Acc) ->
-    parse_cli_opts(T, Acc#{typespec_files => split_string(Files)});
-parse_cli_opts([version | T], Acc) ->
-    parse_cli_opts(T, Acc#{version => true});
+    parse_cli_opts(T, Acc#{trusted => split_string(Files)});
 parse_cli_opts([Opt | _T], _Acc) ->
     %% consider changing this to the rebar3 way of ?PRV_ERROR/1
     %% TODO: catch the error
     error({unrecognized_opt, Opt}).
 
+set_mode(Key, false, Acc = #{mode := Key}) ->
+    maps:remove(Key, Acc);
+set_mode(_Key, false, Acc = #{mode := _OtherMode}) ->
+    Acc;
+set_mode(_Key, false, Acc) ->
+    Acc;
+set_mode(Key, true, Acc = #{mode := show}) ->
+    Acc#{mode => Key};
+set_mode(Key, true, Acc = #{mode := Key}) ->
+    Acc;
+set_mode(Key, true, #{mode := OtherKey}) ->
+    error({colliding_modes, Key, OtherKey});
+set_mode(Key, true, Acc) ->
+    Acc#{mode => Key}.
+
 split_string(String) ->
     rebar_string:lexemes(String, [$,]).
+
+%% Make sure mode is set to show, if it wasn't passed on CLI
+%% or in the config file
+-spec default_mode_show(map()) -> #{mode := _, _ => _}.
+default_mode_show(#{mode := _Anything} = Opts) ->
+    Opts;
+default_mode_show(Opts) ->
+    Opts#{mode => show}.
 
 %% @todo consider adding shorthand versions to some (or all) options,
 %%       even if it doesn't exist on TypEr itself
@@ -101,7 +124,7 @@ opts() ->
      {show,
       undefined,
       "show",
-      {boolean, true},
+      {boolean, false},
       "Print type specifications for all functions on stdout."},
      {show_exported,
       undefined,
@@ -152,26 +175,21 @@ opts() ->
       string,
       "The specified file(s) already contain type specifications and these are to be trusted "
       "in order to print specs for the rest of the files. (Multiple files or dirs, separated "
-      "by commas, can be specified.)"},
-     {version,
-      $v,
-      "version",
-      undefined,
-      "Print the TypEr version and some more information and exit."}].
+      "by commas, can be specified.)"}].
 
 parse_rebar_config(State) ->
     Config = rebar_state:get(State, typer, []),
     lists:foldl(fun parse_rebar_config/2, #{}, proplists:unfold(Config)).
 
+parse_rebar_config({show_success_typings, Value}, Opts) ->
+    Opts#{show_succ => Value};
+parse_rebar_config({typespec_files, Value}, Opts) ->
+    Opts#{trusted => Value};
 parse_rebar_config({Key, Value}, Opts)
-    when Key == show;
-         Key == show_exported;
-         Key == annotate;
-         Key == annotate_inc_files;
+    when Key == mode;
          Key == edoc;
          Key == plt;
          Key == typespec_files;
-         Key == show_success_typings;
          Key == no_spec;
          Key == recursive ->
     Opts#{Key => Value};
