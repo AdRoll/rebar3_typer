@@ -36,7 +36,7 @@ do(State) ->
         RebarConfigOpts = parse_rebar_config(State),
         Opts = maps:merge(RebarConfigOpts, CmdLineOpts),
         ok = rebar_api:debug("Opts: ~p", [Opts]),
-        {error, {?MODULE, not_implemented}}
+        rebar3_typer_runner:run(Opts, State)
     catch
         error:{unrecognized_opt, Opt} ->
             {error, {?MODULE, {unrecognized_opt, Opt}}}
@@ -80,8 +80,6 @@ parse_cli_opts([{plt, PltFile} | T], Acc) ->
     parse_cli_opts(T, Acc#{plt => PltFile});
 parse_cli_opts([{typespec_files, Files} | T], Acc) ->
     parse_cli_opts(T, Acc#{typespec_files => split_string(Files)});
-parse_cli_opts([version | T], Acc) ->
-    parse_cli_opts(T, Acc#{version => true});
 parse_cli_opts([Opt | _T], _Acc) ->
     %% consider changing this to the rebar3 way of ?PRV_ERROR/1
     %% TODO: catch the error
@@ -152,22 +150,14 @@ opts() ->
       string,
       "The specified file(s) already contain type specifications and these are to be trusted "
       "in order to print specs for the rest of the files. (Multiple files or dirs, separated "
-      "by commas, can be specified.)"},
-     {version,
-      $v,
-      "version",
-      undefined,
-      "Print the TypEr version and some more information and exit."}].
+      "by commas, can be specified.)"}].
 
 parse_rebar_config(State) ->
     Config = rebar_state:get(State, typer, []),
     lists:foldl(fun parse_rebar_config/2, #{}, proplists:unfold(Config)).
 
 parse_rebar_config({Key, Value}, Opts)
-    when Key == show;
-         Key == show_exported;
-         Key == annotate;
-         Key == annotate_inc_files;
+    when Key == mode;
          Key == edoc;
          Key == plt;
          Key == typespec_files;

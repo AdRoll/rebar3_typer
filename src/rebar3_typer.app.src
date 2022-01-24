@@ -2,7 +2,7 @@
  rebar3_typer,
  [{description, "A rebar3 plugin wrapper around TypEr"},
   {vsn, git},
-  {applications, [kernel, stdlib]},
+  {applications, [kernel, stdlib, dialyzer]},
   {env, []},
   {licenses, ["MIT"]},
   {links, [{"github", "https://github.com/AdRoll/rebar3_typer"}]}]}.
