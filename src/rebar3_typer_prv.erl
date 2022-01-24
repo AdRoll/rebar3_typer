@@ -32,8 +32,7 @@ do(State) ->
         rebar_api:info("Looking for types to add...", []),
         CmdLineOpts = parse_opts(State),
         RebarConfigOpts = parse_rebar_config(State),
-        Merged = maps:merge(RebarConfigOpts, CmdLineOpts),
-        Opts = default_mode_show(Merged),
+        Opts = set_defaults(maps:merge(RebarConfigOpts, CmdLineOpts), State),
         ok = rebar_api:debug("Opts: ~p", [Opts]),
         rebar3_mini_typer:run(Opts, State)
     catch
@@ -105,13 +104,31 @@ set_mode(Key, true, Acc) ->
 split_string(String) ->
     rebar_string:lexemes(String, [$,]).
 
-%% Make sure mode is set to show, if it wasn't passed on CLI
-%% or in the config file
+%% Setting default values _after_ the CLI and config file settings
+%% have been merged, because if we set it in the CLI defaults,
+%% the config file can't override them. We need to only set them
+%% if they're not set in either place.
+set_defaults(Opts, State) ->
+    default_src_dirs(default_mode_show(Opts), State).
+
 -spec default_mode_show(map()) -> #{mode := _, _ => _}.
 default_mode_show(#{mode := _Anything} = Opts) ->
     Opts;
 default_mode_show(Opts) ->
     Opts#{mode => show}.
+
+default_src_dirs(#{files_r := _Anything} = Opts, _State) ->
+    Opts;
+default_src_dirs(#{} = Opts, State) ->
+    SrcDirs = rebar_state:get(State, src_dirs, []),
+    Extra = rebar_state:get(State, extra_src_dirs, []),
+    FromState = SrcDirs ++ Extra,
+    case FromState of
+        [] ->
+            Opts#{files_r => filelib:wildcard("{src,lib}")};
+        Dirs ->
+            Opts#{files_r => Dirs}
+    end.
 
 %% @todo consider adding shorthand versions to some (or all) options,
 %%       even if it doesn't exist on TypEr itself
