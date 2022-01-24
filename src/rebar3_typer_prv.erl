@@ -62,9 +62,9 @@ parse_opts(State) ->
 parse_cli_opts([], Acc) ->
     Acc;
 parse_cli_opts([{recursive, Dirs} | T], Acc) ->
-    parse_cli_opts(T, Acc#{recursive => split_string(Dirs)});
-parse_cli_opts([{show, Bool} | T], Acc) ->
-    parse_cli_opts(T, set_mode(show, Bool, Acc));
+    parse_cli_opts(T, Acc#{files_r => split_string(Dirs)});
+parse_cli_opts([{show, _Bool} | T], Acc) ->
+    parse_cli_opts(T, Acc);
 parse_cli_opts([{show_exported, Bool} | T], Acc) ->
     parse_cli_opts(T, set_mode(show_exported, Bool, Acc));
 parse_cli_opts([{annotate, Bool} | T], Acc) ->
@@ -92,6 +92,8 @@ set_mode(_Key, false, Acc = #{mode := _OtherMode}) ->
     Acc;
 set_mode(_Key, false, Acc) ->
     Acc;
+set_mode(Key, true, Acc = #{mode := show}) ->
+    Acc#{mode => Key};
 set_mode(Key, true, Acc = #{mode := Key}) ->
     Acc;
 set_mode(Key, true, #{mode := OtherKey}) ->
