@@ -38,6 +38,8 @@ You can also put those options directly in your `rebar.config` file…
      {annotate_inc_files, false},   %% Same as --annotate but annotates all -include() files as well as all .erl files.
      {edoc, false},                 %% Print type information as Edoc @spec comments, not as type specs.
      {plt, "/path/to/plt"},         %% Use the specified dialyzer PLT file rather than the default one.
+     {show_success_typings, false}, %% Show the success typings inferred by Dialyzer / Typer.
+     {no_spec, false},              %% Ignore existing function specs.
      {typespec_files, ["f1", "f2"]} %% The specified file(s) already contain type specifications.
     ]}
 ```

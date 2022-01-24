@@ -73,7 +73,9 @@ parse_rebar_config({Key, Value}, Opts)
          Key == annotate_inc_files;
          Key == edoc;
          Key == plt;
-         Key == typespec_files ->
+         Key == typespec_files;
+         Key == show_success_typings;
+         Key == no_spec ->
     Opts#{Key => Value};
 parse_rebar_config(Opt, _Opts) ->
     error({unrecognized_opt, Opt}).
