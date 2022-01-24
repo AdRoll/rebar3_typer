@@ -172,7 +172,8 @@ parse_rebar_config({Key, Value}, Opts)
          Key == plt;
          Key == typespec_files;
          Key == show_success_typings;
-         Key == no_spec ->
+         Key == no_spec;
+         Key == recursive ->
     Opts#{Key => Value};
 parse_rebar_config(Opt, _Opts) ->
     error({unrecognized_opt, Opt}).
