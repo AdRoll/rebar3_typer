@@ -9,8 +9,7 @@
               {rebar_state, add_provider, 2},
               {rebar_state, command_parsed_args, 1}]).
 
--define(PROVIDER, rebar3_typer).
--define(DEPS, []).
+-define(PROVIDER, typer).
 -define(OPTS,
         [{boolean, $b, "boolean", {boolean, false}, "Boolean example"},
          {string, $s, "rebar-config", {string, "some.txt"}, "String example"},
@@ -27,11 +26,11 @@ init(State) ->
         providers:create([{name, ?PROVIDER}, % The 'user friendly' name of the task
                           {module, ?MODULE}, % The module implementation of the task
                           {bare, true},      % The task can be run by the user, always true
-                          {deps, ?DEPS},     % The list of dependencies
-                          {example, "rebar3 rebar3_plugin"}, % How to use the plugin
+                          {deps, []},        % The list of dependencies
+                          {example, "rebar3 typer"}, % How to use the plugin
                           {opts, ?OPTS},     % list of options understood by the plugin
-                          {short_desc, "A rebar plugin"},
-                          {desc, "A rebar plugin"}]),
+                          {short_desc, "Execute TypEr on your code"},
+                          {desc, "Execute TypEr on your code"}]),
     {ok, rebar_state:add_provider(State, Provider)}.
 
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
@@ -42,7 +41,7 @@ do(State) ->
         #{boolean := true} ->
             {ok, State};
         _ ->
-            {error, io_lib:format("Was broken with Opts: ~p", [Opts])}
+            {error, io_lib:format("Not implemented yet. Opts: ~p", [Opts])}
     end.
 
 -spec format_error(any()) -> iolist().
