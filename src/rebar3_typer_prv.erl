@@ -35,15 +35,18 @@ init(State) ->
 
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
-    CmdLineOpts = parse_opts(State),
-    RebarConfigOpts = parse_rebar_config(State),
-    Opts = maps:merge(RebarConfigOpts, CmdLineOpts),
-    ok = rebar_api:debug("Opts: ~p", [Opts]),
-    {error, io_lib:format("Not implemented yet. Opts: ~p", [Opts])}.
+    try
+        CmdLineOpts = parse_opts(State),
+        RebarConfigOpts = parse_rebar_config(State),
+        Opts = maps:merge(RebarConfigOpts, CmdLineOpts),
+        ok = rebar_api:debug("Opts: ~p", [Opts]),
+        {error, io_lib:format("Not implemented yet. Opts: ~p", [Opts])}
+    catch
+        error:{unrecognized_opt, Opt} ->
+            {error, io_lib:format("Unrecognized option in rebar.config: ~p", [Opt])}
+    end.
 
 -spec format_error(any()) -> iolist().
-format_error({unrecognized_opt, Opt}) ->
-    io_lib:format("Unrecognized option in rebar.config: ~p", [Opt]);
 format_error(Reason) ->
     io_lib:format("~p", [Reason]).
 
