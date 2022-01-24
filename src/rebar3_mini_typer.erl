@@ -596,10 +596,7 @@ get_type_info(Func, Types) ->
 %% @todo construct files_r or files
 -spec process_cl_args(opts()) -> {args(), analysis()}.
 process_cl_args(Opts) ->
-    analyze_args(
-                     maps:to_list(Opts),
-                 #args{},
-                 #analysis{}).
+    analyze_args(maps:to_list(Opts), #args{}, #analysis{}).
 
 analyze_args([], Args, Analysis) ->
     {Args, Analysis};

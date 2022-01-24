@@ -32,7 +32,8 @@ do(State) ->
         rebar_api:info("Looking for types to add...", []),
         CmdLineOpts = parse_opts(State),
         RebarConfigOpts = parse_rebar_config(State),
-        Opts = maps:merge(RebarConfigOpts, CmdLineOpts),
+        Merged = maps:merge(RebarConfigOpts, CmdLineOpts),
+        Opts = default_mode_show(Merged),
         ok = rebar_api:debug("Opts: ~p", [Opts]),
         rebar3_mini_typer:run(Opts, State)
     catch
@@ -57,14 +58,14 @@ format_error(Reason) ->
 
 parse_opts(State) ->
     {CliOpts, _} = rebar_state:command_parsed_args(State),
-    parse_cli_opts(CliOpts, #{mode => show}).
+    parse_cli_opts(CliOpts, #{}).
 
 parse_cli_opts([], Acc) ->
     Acc;
 parse_cli_opts([{recursive, Dirs} | T], Acc) ->
     parse_cli_opts(T, Acc#{files_r => split_string(Dirs)});
-parse_cli_opts([{show, _Bool} | T], Acc) ->
-    parse_cli_opts(T, Acc);
+parse_cli_opts([{show, Bool} | T], Acc) ->
+    parse_cli_opts(T, set_mode(show, Bool, Acc));
 parse_cli_opts([{show_exported, Bool} | T], Acc) ->
     parse_cli_opts(T, set_mode(show_exported, Bool, Acc));
 parse_cli_opts([{annotate, Bool} | T], Acc) ->
@@ -104,6 +105,14 @@ set_mode(Key, true, Acc) ->
 split_string(String) ->
     rebar_string:lexemes(String, [$,]).
 
+%% Make sure mode is set to show, if it wasn't passed on CLI
+%% or in the config file
+-spec default_mode_show(map()) -> map().
+default_mode_show(#{mode := _Anything} = Opts) ->
+    Opts;
+default_mode_show(Opts) ->
+    Opts#{mode => show}.
+
 %% @todo consider adding shorthand versions to some (or all) options,
 %%       even if it doesn't exist on TypEr itself
 opts() ->
@@ -115,7 +124,7 @@ opts() ->
      {show,
       undefined,
       "show",
-      {boolean, true},
+      {boolean, false},
       "Print type specifications for all functions on stdout."},
      {show_exported,
       undefined,
