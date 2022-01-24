@@ -23,3 +23,21 @@ $ rebar3 typer
 ===> Compiling rebar3_typer
 <Plugin Output>
 ```
+
+## Configuration
+
+<!-- @pablocostas text after #5 is merged -->
+
+You can also put those options directly in your `rebar.config` file…
+
+```erlang
+{typer,
+    [{show, true},                  %% Print type specifications for all functions on stdout.
+     {show_exported, false},        %% Same as --show, but print specifications for exported functions only.
+     {annotate, false},             %% Annotate the specified files with type specifications.
+     {annotate_inc_files, false},   %% Same as --annotate but annotates all -include() files as well as all .erl files.
+     {edoc, false},                 %% Print type information as Edoc @spec comments, not as type specs.
+     {plt, "/path/to/plt"},         %% Use the specified dialyzer PLT file rather than the default one.
+     {typespec_files, ["f1", "f2"]} %% The specified file(s) already contain type specifications.
+    ]}
+```

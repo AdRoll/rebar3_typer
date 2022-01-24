@@ -35,16 +35,15 @@ init(State) ->
 
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
-    Opts = parse_opts(State),
+    CmdLineOpts = parse_opts(State),
+    RebarConfigOpts = parse_rebar_config(State),
+    Opts = maps:merge(RebarConfigOpts, CmdLineOpts),
     ok = rebar_api:debug("Opts: ~p", [Opts]),
-    case Opts of
-        #{boolean := true} ->
-            {ok, State};
-        _ ->
-            {error, io_lib:format("Not implemented yet. Opts: ~p", [Opts])}
-    end.
+    {error, io_lib:format("Not implemented yet. Opts: ~p", [Opts])}.
 
 -spec format_error(any()) -> iolist().
+format_error({unrecognized_opt, Opt}) ->
+    io_lib:format("Unrecognized option in rebar.config: ~p", [Opt]);
 format_error(Reason) ->
     io_lib:format("~p", [Reason]).
 
@@ -59,3 +58,19 @@ parse_opts(State) ->
       string => proplists:get_value(string, Args),
       atom => proplists:get_value(atom, Args),
       atom_none => proplists:get_value(atom_none, Args)}.
+
+parse_rebar_config(State) ->
+    Config = rebar_state:get(State, typer, []),
+    lists:foldl(fun parse_rebar_config/2, #{}, proplists:unfold(Config)).
+
+parse_rebar_config({Key, Value}, Opts)
+    when Key == show;
+         Key == show_exported;
+         Key == annotate;
+         Key == annotate_inc_files;
+         Key == edoc;
+         Key == plt;
+         Key == typespec_files ->
+    Opts#{Key => Value};
+parse_rebar_config(Opt, _Opts) ->
+    error({unrecognized_opt, Opt}).
