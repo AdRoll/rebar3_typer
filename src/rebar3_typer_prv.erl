@@ -107,7 +107,7 @@ split_string(String) ->
 
 %% Make sure mode is set to show, if it wasn't passed on CLI
 %% or in the config file
--spec default_mode_show(map()) -> map().
+-spec default_mode_show(map()) -> #{'mode':=_, _=>_}.
 default_mode_show(#{mode := _Anything} = Opts) ->
     Opts;
 default_mode_show(Opts) ->
