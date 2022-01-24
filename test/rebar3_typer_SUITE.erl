@@ -1,4 +1,4 @@
--module({{ repo-name }}_SUITE).
+-module(rebar3_typer_SUITE).
 
 -behaviour(ct_suite).
 
