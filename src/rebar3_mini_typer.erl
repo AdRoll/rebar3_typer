@@ -15,13 +15,13 @@
 
 -type mode() :: show | show_exported | annotate | annotate_inc_files.
 -type opts() ::
-    #{recursive => boolean(),
-      mode => mode(),
-      show_success_typings => boolean(),
+    #{mode := mode(),
+      recursive => boolean(),
+      show_succ => boolean(),
       no_spec => boolean(),
       edoc => boolean(),
       plt => file:filename(),
-      typespec_files => [file:filename()]}.
+      trusted => [file:filename()]}.
 
 -export_type([opts/0]).
 
@@ -60,7 +60,7 @@ run(Opts, State) ->
     rebar_api:debug("Running typer with ~p", [Opts]),
     _ = io:setopts(standard_error, [{encoding, unicode}]),
     _ = io:setopts([{encoding, unicode}]),
-    {Args, Analysis} = process_cl_args(),
+    {Args, Analysis} = process_cl_args(Opts),
     %% io:format("Args: ~p\n", [Args]),
     %% io:format("Analysis: ~p\n", [Analysis]),
     Timer = dialyzer_timing:init(false),
@@ -591,95 +591,21 @@ get_type_info(Func, Types) ->
 %%--------------------------------------------------------------------
 %% Processing of command-line options and arguments.
 %%--------------------------------------------------------------------
-
--spec process_cl_args() -> {args(), analysis()}.
-process_cl_args() ->
-    ArgList = init:get_plain_arguments(),
-    %% io:format("Args is ~tp\n", [ArgList]),
-    {Args, Analysis} = analyze_args(ArgList, #args{}, #analysis{}),
-    %% if the mode has not been set, set it to the default mode (show)
-    {Args,
-     case Analysis#analysis.mode of
-         undefined ->
-             Analysis#analysis{mode = show};
-         Mode when is_atom(Mode) ->
-             Analysis
-     end}.
+%% @todo cmd-line args that are not part of rebar3:
+%%          -D -I -r -pa -pz
+%% @todo construct files_r or files
+-spec process_cl_args(opts()) -> {args(), analysis()}.
+process_cl_args(Opts) ->
+    analyze_args(
+                     maps:to_list(Opts),
+                 #args{},
+                 #analysis{}).
 
 analyze_args([], Args, Analysis) ->
     {Args, Analysis};
-analyze_args(ArgList, Args, Analysis) ->
-    {Result, Rest} = cl(ArgList),
+analyze_args([Result | Rest], Args, Analysis) ->
     {NewArgs, NewAnalysis} = analyze_result(Result, Args, Analysis),
     analyze_args(Rest, NewArgs, NewAnalysis).
-
-cl(["--edoc" | Opts]) ->
-    {edoc, Opts};
-cl(["--show" | Opts]) ->
-    {{mode, show}, Opts};
-cl(["--show_exported" | Opts]) ->
-    {{mode, show_exported}, Opts};
-cl(["--show-exported" | Opts]) ->
-    {{mode, show_exported}, Opts};
-cl(["--show_success_typings" | Opts]) ->
-    {show_succ, Opts};
-cl(["--show-success-typings" | Opts]) ->
-    {show_succ, Opts};
-cl(["--annotate" | Opts]) ->
-    {{mode, annotate}, Opts};
-cl(["--annotate-inc-files" | Opts]) ->
-    {{mode, annotate_inc_files}, Opts};
-cl(["--no_spec" | Opts]) ->
-    {no_spec, Opts};
-cl(["--plt", Plt | Opts]) ->
-    {{plt, Plt}, Opts};
-cl(["-D" ++ Def | Opts]) ->
-    case Def of
-        "" ->
-            fatal_error("no variable name specified after -D");
-        _ ->
-            DefPair = process_def_list(re:split(Def, "=", [{return, list}, unicode])),
-            {{def, DefPair}, Opts}
-    end;
-cl(["-I", Dir | Opts]) ->
-    {{inc, Dir}, Opts};
-cl(["-I" ++ Dir | Opts]) ->
-    case Dir of
-        "" ->
-            fatal_error("no include directory specified after -I");
-        _ ->
-            {{inc, Dir}, Opts}
-    end;
-cl(["-T" | Opts]) ->
-    {Files, RestOpts} = dialyzer_cl_parse:collect_args(Opts),
-    case Files of
-        [] ->
-            fatal_error("no file or directory specified after -T");
-        [_ | _] ->
-            {{trusted, Files}, RestOpts}
-    end;
-cl(["-r" | Opts]) ->
-    {Files, RestOpts} = dialyzer_cl_parse:collect_args(Opts),
-    {{files_r, Files}, RestOpts};
-cl(["-pa", Dir | Opts]) ->
-    {{pa, Dir}, Opts};
-cl(["-pz", Dir | Opts]) ->
-    {{pz, Dir}, Opts};
-cl(["-" ++ H | _]) ->
-    fatal_error("unknown option -" ++ H);
-cl(Opts) ->
-    {Files, RestOpts} = dialyzer_cl_parse:collect_args(Opts),
-    {{files, Files}, RestOpts}.
-
-process_def_list(L) ->
-    case L of
-        [Name, Value] ->
-            {ok, Tokens, _} = erl_scan:string(Value ++ "."),
-            {ok, ErlValue} = erl_parse:parse_term(Tokens),
-            {list_to_atom(Name), ErlValue};
-        [Name] ->
-            {list_to_atom(Name), true}
-    end.
 
 %% Get information about files that the user trusts and wants to analyze
 analyze_result({files, Val}, Args, Analysis) ->
@@ -691,16 +617,11 @@ analyze_result({files_r, Val}, Args, Analysis) ->
 analyze_result({trusted, Val}, Args, Analysis) ->
     NewVal = Args#args.trusted ++ Val,
     {Args#args{trusted = NewVal}, Analysis};
-analyze_result(edoc, Args, Analysis) ->
-    {Args, Analysis#analysis{edoc = true}};
+analyze_result({edoc, Value}, Args, Analysis) ->
+    {Args, Analysis#analysis{edoc = Value}};
 %% Get useful information for actual analysis
 analyze_result({mode, Mode}, Args, Analysis) ->
-    case Analysis#analysis.mode of
-        undefined ->
-            {Args, Analysis#analysis{mode = Mode}};
-        OldMode ->
-            mode_error(OldMode, Mode)
-    end;
+    {Args, Analysis#analysis{mode = Mode}};
 analyze_result({def, Val}, Args, Analysis) ->
     NewVal = Analysis#analysis.macros ++ [Val],
     {Args, Analysis#analysis{macros = NewVal}};
@@ -709,10 +630,10 @@ analyze_result({inc, Val}, Args, Analysis) ->
     {Args, Analysis#analysis{includes = NewVal}};
 analyze_result({plt, Plt}, Args, Analysis) ->
     {Args, Analysis#analysis{plt = Plt}};
-analyze_result(show_succ, Args, Analysis) ->
-    {Args, Analysis#analysis{show_succ = true}};
-analyze_result(no_spec, Args, Analysis) ->
-    {Args, Analysis#analysis{no_spec = true}};
+analyze_result({show_succ, Value}, Args, Analysis) ->
+    {Args, Analysis#analysis{show_succ = Value}};
+analyze_result({no_spec, Value}, Args, Analysis) ->
+    {Args, Analysis#analysis{no_spec = Value}};
 analyze_result({pa, Dir}, Args, Analysis) ->
     true = code:add_patha(Dir),
     {Args, Analysis};
@@ -1041,13 +962,6 @@ get_exported_types_from_core(Core) ->
 fatal_error(Slogan) ->
     msg(io_lib:format("typer: ~ts\n", [Slogan])),
     erlang:halt(1).
-
--spec mode_error(mode(), mode()) -> no_return().
-mode_error(OldMode, NewMode) ->
-    Msg = io_lib:format("Mode was previously set to '~s'; "
-                        "cannot set it to '~s' now",
-                        [OldMode, NewMode]),
-    fatal_error(Msg).
 
 -spec compile_error([string()]) -> no_return().
 compile_error(Reason) ->
