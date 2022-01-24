@@ -1,8 +1,8 @@
 {application,
  rebar3_typer,
- [{description, "A rebar plugin"},
+ [{description, "A rebar3 plugin wrapper around TypEr"},
   {vsn, git},
   {applications, [kernel, stdlib]},
   {env, []},
-  {licenses, ["Apache 2.0"]},
-  {links, [{"github", "git@github.com:AdRoll/rebar3_typer.git"}]}]}.
+  {licenses, ["MIT"]},
+  {links, [{"github", "https://github.com/AdRoll/rebar3_typer"}]}]}.
