@@ -33,20 +33,25 @@ init(State) ->
                           {desc, "Execute TypEr on your code"}]),
     {ok, rebar_state:add_provider(State, Provider)}.
 
--spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
+-spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, {rebar3_typer_prv, term()}}.
 do(State) ->
     try
+        rebar_api:info("Looking for types to add...", []),
         CmdLineOpts = parse_opts(State),
         RebarConfigOpts = parse_rebar_config(State),
         Opts = maps:merge(RebarConfigOpts, CmdLineOpts),
         ok = rebar_api:debug("Opts: ~p", [Opts]),
-        {error, io_lib:format("Not implemented yet. Opts: ~p", [Opts])}
+        {error, {?MODULE, not_implemented}}
     catch
         error:{unrecognized_opt, Opt} ->
-            {error, io_lib:format("Unrecognized option in rebar.config: ~p", [Opt])}
+            {error, {?MODULE, {unrecognized_opt, Opt}}}
     end.
 
 -spec format_error(any()) -> iolist().
+format_error(not_implemented) ->
+    io_lib:format("Not yet implemented.", []);
+format_error({unrecognized_opt, Opt}) ->
+    io_lib:format("Unrecognized option in rebar.config: ~p", [Opt]);
 format_error(Reason) ->
     io_lib:format("~p", [Reason]).
 
