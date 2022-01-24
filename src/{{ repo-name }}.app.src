@@ -1,0 +1,8 @@
+{application,
+ {{ repo-name }},
+ [{description, "A rebar plugin"},
+  {vsn, git},
+  {applications, [kernel, stdlib]},
+  {env, []},
+  {licenses, ["Apache 2.0"]},
+  {links, [{"github", "{{ git-url }}"}]}]}.
