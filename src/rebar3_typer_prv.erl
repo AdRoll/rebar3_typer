@@ -30,12 +30,17 @@ init(State) ->
 do(State) ->
     try
         rebar_api:info("Looking for types to add...", []),
+        RebarIo =
+            #{debug => fun rebar_api:debug/2,
+              info => fun rebar_api:info/2,
+              warn => fun rebar_api:warn/2,
+              abort => fun rebar_api:abort/2},
         CmdLineOpts = parse_opts(State),
         RebarConfigOpts = parse_rebar_config(State),
-        Opts = set_defaults(maps:merge(RebarConfigOpts, CmdLineOpts), State),
-        erlang:display(Opts),
-        ok = rebar_api:debug("Opts: ~p", [Opts]),
-        rebar3_mini_typer:run(Opts, State)
+        Merged = maps:merge(RebarConfigOpts, CmdLineOpts),
+        Opts = set_defaults(Merged#{io => RebarIo}, State),
+        ok = rebar3_mini_typer:run(Opts),
+        {ok, State}
     catch
         error:{unrecognized_opt, Opt} ->
             {error, {?MODULE, {unrecognized_opt, Opt}}}
@@ -109,20 +114,17 @@ split_string(String) ->
 %% have been merged, because if we set it in the CLI defaults,
 %% the config file can't override them. We need to only set them
 %% if they're not set in either place.
--spec set_defaults(map(), rebar_state:t()) ->
-                      #{files_r := _,
-                        mode := _,
-                        _ => _}.
+-spec set_defaults(map(), rebar_state:t()) -> rebar3_mini_typer:opts().
 set_defaults(Opts, State) ->
     default_src_dirs(default_mode_show(Opts), State).
 
--spec default_mode_show(map()) -> #{mode := _, _ => _}.
+-spec default_mode_show(map()) -> rebar3_mini_typer:opts().
 default_mode_show(#{mode := _Anything} = Opts) ->
     Opts;
 default_mode_show(Opts) ->
     Opts#{mode => show}.
 
--spec default_src_dirs(map(), rebar_state:t()) -> #{files_r := _, _ => _}.
+-spec default_src_dirs(map(), rebar_state:t()) -> rebar3_mini_typer:opts().
 default_src_dirs(#{files_r := _Anything} = Opts, _State) ->
     Opts;
 default_src_dirs(#{} = Opts, State) ->
