@@ -13,7 +13,7 @@
         {elvis_style, no_debug_call, disable},
         {elvis_style, nesting_level, #{level => 5}}]).
 
--export([run/2]).
+-export([run/1]).
 
 -type printer(Return) :: fun((io:format(), [term()]) -> Return).
 -type io() ::
@@ -66,8 +66,8 @@
 
 -type args() :: #args{}.
 
--spec run(opts(), rebar_state:t()) -> {ok, rebar_state:t()}.
-run(Opts, State) ->
+-spec run(opts()) -> ok.
+run(Opts) ->
     _ = io:setopts(standard_error, [{encoding, unicode}]),
     _ = io:setopts([{encoding, unicode}]),
     {Args, Analysis} = process_cl_args(Opts),
@@ -81,7 +81,7 @@ run(Opts, State) ->
     TypeInfo = get_type_info(Analysis4),
     dialyzer_timing:stop(Timer),
     show_or_annotate(TypeInfo),
-    {ok, State}.
+    ok.
 
 -spec extract(analysis(), [file:filename()]) -> analysis().
 extract(#analysis{macros = Macros,
