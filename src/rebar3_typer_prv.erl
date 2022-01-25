@@ -19,7 +19,7 @@ init(State) ->
         providers:create([{name, typer},
                           {module, ?MODULE},
                           {bare, true}, % The task can be run by the user, always true
-                          {deps, []},
+                          {deps, [app_discovery]},
                           {example, "rebar3 typer"},
                           {opts, opts()},
                           {short_desc, "Execute TypEr on your code"},
@@ -33,6 +33,7 @@ do(State) ->
         CmdLineOpts = parse_opts(State),
         RebarConfigOpts = parse_rebar_config(State),
         Opts = set_defaults(maps:merge(RebarConfigOpts, CmdLineOpts), State),
+        erlang:display(Opts),
         ok = rebar_api:debug("Opts: ~p", [Opts]),
         rebar3_mini_typer:run(Opts, State)
     catch
@@ -108,6 +109,10 @@ split_string(String) ->
 %% have been merged, because if we set it in the CLI defaults,
 %% the config file can't override them. We need to only set them
 %% if they're not set in either place.
+-spec set_defaults(map(), rebar_state:t()) ->
+                      #{files_r := _,
+                        mode := _,
+                        _ => _}.
 set_defaults(Opts, State) ->
     default_src_dirs(default_mode_show(Opts), State).
 
@@ -117,18 +122,46 @@ default_mode_show(#{mode := _Anything} = Opts) ->
 default_mode_show(Opts) ->
     Opts#{mode => show}.
 
+-spec default_src_dirs(map(), rebar_state:t()) -> #{files_r := _, _ => _}.
 default_src_dirs(#{files_r := _Anything} = Opts, _State) ->
     Opts;
 default_src_dirs(#{} = Opts, State) ->
-    SrcDirs = rebar_state:get(State, src_dirs, []),
-    Extra = rebar_state:get(State, extra_src_dirs, []),
-    FromState = SrcDirs ++ Extra,
-    case FromState of
+    case dirs_from_app_discovery(State) of
         [] ->
-            Opts#{files_r => filelib:wildcard("{src,lib}")};
+            Opts#{files_r => infer_src_dirs(State)};
         Dirs ->
             Opts#{files_r => Dirs}
     end.
+
+infer_src_dirs(State) ->
+    SrcDirs = rebar_state:get(State, src_dirs, []),
+    Extra = rebar_state:get(State, extra_src_dirs, []),
+    SubDirs = rebar_state:get(State, sub_dirs, []),
+    FromState = SrcDirs ++ Extra ++ SubDirs,
+    case FromState of
+        [] ->
+            filelib:wildcard("{src,lib,apps}"); % last ditch
+        Dirs ->
+            Dirs
+    end.
+
+dirs_from_app_discovery(State) ->
+    Apps =
+        case rebar_state:current_app(State) of
+            undefined ->
+                rebar_state:project_apps(State);
+            AppInfo ->
+                [AppInfo]
+        end,
+    Cwd = rebar_state:dir(State),
+    [dir_for_app(AppInfo, Cwd) || AppInfo <- Apps].
+
+-spec dir_for_app(rebar_app_info:t(), file:filename_all()) -> file:filename_all() | [].
+dir_for_app(AppInfo, Cwd) ->
+    {ok, Dir} =
+        rebar_file_utils:path_from_ancestor(
+            rebar_app_info:dir(AppInfo), Cwd),
+    filename:join(Dir, "src").
 
 %% @todo consider adding shorthand versions to some (or all) options,
 %%       even if it doesn't exist on TypEr itself
