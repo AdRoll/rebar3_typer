@@ -33,7 +33,12 @@ do(State) ->
         CmdLineOpts = parse_opts(State),
         RebarConfigOpts = parse_rebar_config(State),
         Merged = maps:merge(RebarConfigOpts, CmdLineOpts),
-        Opts = default_mode_show(Merged),
+        RebarIo =
+            #{debug => fun rebar_api:debug/2,
+              info => fun rebar_api:info/2,
+              warn => fun rebar_api:warn/2,
+              abort => fun rebar_api:abort/2},
+        Opts = default_mode_show(Merged#{io => RebarIo}),
         ok = rebar_api:debug("Opts: ~p", [Opts]),
         rebar3_mini_typer:run(Opts, State)
     catch
@@ -107,7 +112,7 @@ split_string(String) ->
 
 %% Make sure mode is set to show, if it wasn't passed on CLI
 %% or in the config file
--spec default_mode_show(map()) -> #{mode := _, _ => _}.
+-spec default_mode_show(map()) -> rebar3_mini_typer:opts().
 default_mode_show(#{mode := _Anything} = Opts) ->
     Opts;
 default_mode_show(Opts) ->
