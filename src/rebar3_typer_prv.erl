@@ -39,8 +39,8 @@ do(State) ->
               warn => fun rebar_api:warn/2,
               abort => fun rebar_api:abort/2},
         Opts = default_mode_show(Merged#{io => RebarIo}),
-        ok = rebar_api:debug("Opts: ~p", [Opts]),
-        rebar3_mini_typer:run(Opts, State)
+        ok = rebar3_mini_typer:run(Opts),
+        {ok, State}
     catch
         error:{unrecognized_opt, Opt} ->
             {error, {?MODULE, {unrecognized_opt, Opt}}}
