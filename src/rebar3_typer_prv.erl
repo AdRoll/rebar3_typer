@@ -93,13 +93,11 @@ parse_cli_opts([Opt | _T], _Acc) ->
     error({unrecognized_opt, Opt}).
 
 set_mode(Key, false, Acc = #{mode := Key}) ->
-    maps:remove(Key, Acc);
+    maps:remove(mode, Acc);
 set_mode(_Key, false, Acc = #{mode := _OtherMode}) ->
     Acc;
 set_mode(_Key, false, Acc) ->
     Acc;
-set_mode(Key, true, Acc = #{mode := show}) ->
-    Acc#{mode => Key};
 set_mode(Key, true, Acc = #{mode := Key}) ->
     Acc;
 set_mode(Key, true, #{mode := OtherKey}) ->
@@ -233,6 +231,8 @@ parse_rebar_config(State) ->
     Config = rebar_state:get(State, typer, []),
     lists:foldl(fun parse_rebar_config/2, #{}, proplists:unfold(Config)).
 
+parse_rebar_config({recursive, Value}, Opts) ->
+    Opts#{files_r => Value};
 parse_rebar_config({show_success_typings, Value}, Opts) ->
     Opts#{show_succ => Value};
 parse_rebar_config({typespec_files, Value}, Opts) ->
