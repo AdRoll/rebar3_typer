@@ -170,11 +170,10 @@ dirs_from_app_discovery(State) ->
             AppInfo ->
                 [AppInfo]
         end,
-    Cwd = rebar_state:dir(State),
-    [dir_for_app(AppInfo, Cwd) || AppInfo <- Apps].
+    [dir_for_app(AppInfo) || AppInfo <- Apps].
 
--spec dir_for_app(rebar_app_info:t(), file:filename_all()) -> file:filename_all() | [].
-dir_for_app(AppInfo, _Cwd) ->
+-spec dir_for_app(rebar_app_info:t()) -> file:filename_all() | [].
+dir_for_app(AppInfo) ->
     Dir = rebar_app_info:dir(AppInfo),
     filename:join(Dir, "src").
 
