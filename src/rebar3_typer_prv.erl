@@ -135,7 +135,7 @@ default_plt(#{} = Opts, State) ->
     %% so there's a high chance we will find a PLT in there
     PltFile =
         filename:join([rebar_dir:base_dir(State),
-                      ["rebar3", "_", rebar_utils:otp_release(), "_plt"]]),
+                       ["rebar3", "_", rebar_utils:otp_release(), "_plt"]]),
     Opts#{plt => PltFile}.
 
 -spec default_src_dirs(rebar3_mini_typer:opts(), rebar_state:t()) ->
