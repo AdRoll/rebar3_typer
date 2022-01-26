@@ -74,12 +74,12 @@ recursive(_Config) ->
     {files_r, ["foo"]} = lists:keyfind(files_r, 1, get_opts(State3)),
 
     ct:comment("finds dirs from extra_src_dirs in rebar.config"),
-    State4 = rebar_state:set(State, extra_src_dirs, ["foo"]),
-    {files_r, ["foo"]} = lists:keyfind(files_r, 1, get_opts(State4)),
+    State4 = rebar_state:set(State, extra_src_dirs, ["bar"]),
+    {files_r, ["bar"]} = lists:keyfind(files_r, 1, get_opts(State4)),
 
     ct:comment("finds dirs from src_dirs in rebar.config"),
-    State5 = rebar_state:set(State, src_dirs, ["foo"]),
-    {files_r, ["foo"]} = lists:keyfind(files_r, 1, get_opts(State5)),
+    State5 = rebar_state:set(State, src_dirs, ["baz"]),
+    {files_r, ["baz"]} = lists:keyfind(files_r, 1, get_opts(State5)),
 
     ct:comment("assumes reasonable defaults"),
     file:set_cwd("../../../../test/dummy"),
