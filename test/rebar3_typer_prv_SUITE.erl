@@ -81,19 +81,19 @@ good_modes(_Config) ->
     {mode, show} = lists:keyfind(mode, 1, get_opts(State3)),
 
     ct:comment("--show=false uses what's in rebar.config"),
-    State4 = rebar_state:command_parsed_args(State3, {[{show, false}], []}),
+    State4 = rebar_state:command_parsed_args(State2, {[{show, false}], []}),
     {mode, show_exported} = lists:keyfind(mode, 1, get_opts(State4)),
 
     ct:comment("--annotate works"),
-    State5 = rebar_state:command_parsed_args(State4, {[{annotate, true}], []}),
+    State5 = rebar_state:command_parsed_args(State2, {[{annotate, true}], []}),
     {mode, annotate} = lists:keyfind(mode, 1, get_opts(State5)),
 
     ct:comment("--show_exported works"),
-    State6 = rebar_state:command_parsed_args(State5, {[{show_exported, true}], []}),
+    State6 = rebar_state:command_parsed_args(State2, {[{show_exported, true}], []}),
     {mode, show_exported} = lists:keyfind(mode, 1, get_opts(State6)),
 
     ct:comment("--annotate-inc-files works"),
-    State7 = rebar_state:command_parsed_args(State6, {[{annotate_inc_files, true}], []}),
+    State7 = rebar_state:command_parsed_args(State2, {[{annotate_inc_files, true}], []}),
     {mode, annotate_inc_files} = lists:keyfind(mode, 1, get_opts(State7)),
 
     ct:comment("on and off works"),
@@ -104,7 +104,7 @@ good_modes(_Config) ->
 
     ct:comment("many false ones"),
     State9 =
-        rebar_state:command_parsed_args(State8,
+        rebar_state:command_parsed_args(State2,
                                         {[{annotate, true},
                                           {annotate_inc_files, false},
                                           {show, false}],
@@ -113,7 +113,7 @@ good_modes(_Config) ->
 
     ct:comment("super true"),
     StateA =
-        rebar_state:command_parsed_args(State9,
+        rebar_state:command_parsed_args(State2,
                                         {[{annotate, true}, {annotate, true}, {annotate, true}],
                                          []}),
     {mode, annotate} = lists:keyfind(mode, 1, get_opts(StateA)),
