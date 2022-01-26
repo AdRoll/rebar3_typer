@@ -24,7 +24,6 @@
 -type mode() :: show | show_exported | annotate | annotate_inc_files.
 -type opts() ::
     #{mode := mode(),
-      recursive => boolean(),
       show_succ => boolean(),
       no_spec => boolean(),
       edoc => boolean(),

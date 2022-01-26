@@ -81,6 +81,7 @@ You can also put those options directly in your `rebar.config` file:
      {plt, "/path/to/plt"},         %% Use the specified dialyzer PLT file rather than the default one.
      {show_success_typings, false}, %% Show the success typings inferred by Dialyzer / Typer.
      {no_spec, false},              %% Ignore existing function specs.
+     {recursive, ["d1/", "d2/"]},   %% Search directories recursively for .erl files.
      {typespec_files, ["f1", "f2"]} %% The specified file(s) already contain type specifications.
     ]}
 ```
