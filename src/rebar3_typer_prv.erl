@@ -65,7 +65,9 @@ parse_opts(State) ->
     {CliOpts, _} = rebar_state:command_parsed_args(State),
     %% rebar3 writes the PLT from running dialyzer with the tool to this path,
     %% so there's a high chance we will find a PLT in there
-    PltFile = filename:join([rebar_dir:base_dir(State), ["rebar3", "_", rebar_utils:otp_release(), "_plt"]]),
+    PltFile =
+        filename:join([rebar_dir:base_dir(State),
+                       ["rebar3", "_", rebar_utils:otp_release(), "_plt"]]),
     parse_cli_opts(CliOpts, #{plt => PltFile}).
 
 parse_cli_opts([], Acc) ->
