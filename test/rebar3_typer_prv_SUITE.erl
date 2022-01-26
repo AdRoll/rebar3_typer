@@ -58,6 +58,8 @@ recursive(_Config) ->
         rebar3_typer:init(
             rebar_state:new()),
 
+    {ok, Cwd} = file:get_cwd(),
+
     ct:comment("files_r is correctly picked up from rebar.config"),
     Files = ["src/", "test/"],
     State1 = rebar_state:set(State, typer, [{recursive, Files}]),
@@ -66,6 +68,26 @@ recursive(_Config) ->
     ct:comment("--recursive takes precedence"),
     State2 = rebar_state:command_parsed_args(State1, {[{recursive, "lib/,src/"}], []}),
     {files_r, ["lib/", "src/"]} = lists:keyfind(files_r, 1, get_opts(State2)),
+
+    ct:comment("finds dirs from sub_dirs in rebar.config"),
+    State3 = rebar_state:set(State, sub_dirs, ["foo"]),
+    {files_r, ["foo"]} = lists:keyfind(files_r, 1, get_opts(State3)),
+
+    ct:comment("finds dirs from extra_src_dirs in rebar.config"),
+    State4 = rebar_state:set(State, extra_src_dirs, ["foo"]),
+    {files_r, ["foo"]} = lists:keyfind(files_r, 1, get_opts(State4)),
+
+    ct:comment("finds dirs from src_dirs in rebar.config"),
+    State5 = rebar_state:set(State, src_dirs, ["foo"]),
+    {files_r, ["foo"]} = lists:keyfind(files_r, 1, get_opts(State5)),
+
+    ct:comment("assumes reasonable defaults"),
+    file:set_cwd("../../../../test/dummy"),
+    {ok, DummyConfig} = file:consult("rebar.config"),
+    {ok, State6} = rebar3_typer:init(rebar_state:new(DummyConfig)),
+    {files_r, ["src"]} = lists:keyfind(files_r, 1, get_opts(State6)),
+    file:set_cwd(Cwd),
+
     {comment, ""}.
 
 %% @doc --show|show_exported|annotate|annotate_inc_files / mode
