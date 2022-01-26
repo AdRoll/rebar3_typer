@@ -33,7 +33,7 @@ do(State) ->
         CmdLineOpts = parse_opts(State),
         RebarConfigOpts = parse_rebar_config(State),
         Merged = maps:merge(RebarConfigOpts, CmdLineOpts),
-        Opts = set_defaults(Merged, State),
+        Opts = ensure_defaults(Merged, State),
         ok = rebar3_mini_typer:run(Opts),
         {ok, State}
     catch
@@ -78,6 +78,8 @@ parse_cli_opts([{no_spec, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{no_spec => Bool});
 parse_cli_opts([{edoc, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{edoc => Bool});
+parse_cli_opts([{plt, undefined} | T], Acc) ->
+    parse_cli_opts(T, Acc);
 parse_cli_opts([{plt, PltFile} | T], Acc) ->
     parse_cli_opts(T, Acc#{plt => PltFile});
 parse_cli_opts([{typespec_files, Files} | T], Acc) ->
@@ -107,9 +109,9 @@ split_string(String) ->
 %% have been merged, because if we set it in the CLI defaults,
 %% the config file can't override them. We need to only set them
 %% if they're not set in either place.
--spec set_defaults(map(), rebar_state:t()) -> rebar3_mini_typer:opts().
-set_defaults(Opts, State) ->
-    default_src_dirs(default_io(default_mode_show(Opts)), State).
+-spec ensure_defaults(map(), rebar_state:t()) -> rebar3_mini_typer:opts().
+ensure_defaults(Opts, State) ->
+    default_plt(default_src_dirs(default_io(default_mode_show(Opts)), State), State).
 
 -spec default_io(rebar3_mini_typer:opts()) -> rebar3_mini_typer:opts().
 default_io(Opts) ->
@@ -124,6 +126,17 @@ default_mode_show(#{mode := _Anything} = Opts) ->
     Opts;
 default_mode_show(Opts) ->
     Opts#{mode => show}.
+
+-spec default_plt(map(), rebar_state:t()) -> rebar3_mini_typer:opts().
+default_plt(#{plt := _Anything} = Opts, _State) ->
+    Opts;
+default_plt(#{} = Opts, State) ->
+    %% rebar3 writes the PLT from running dialyzer with the tool to this path,
+    %% so there's a high chance we will find a PLT in there
+    PltFile =
+        filename:join([rebar_dir:base_dir(State),
+                      ["rebar3", "_", rebar_utils:otp_release(), "_plt"]]),
+    Opts#{plt => PltFile}.
 
 -spec default_src_dirs(rebar3_mini_typer:opts(), rebar_state:t()) ->
                           rebar3_mini_typer:opts().
@@ -222,7 +235,8 @@ opts() ->
       undefined,
       "plt",
       string,
-      "Use the specified dialyzer PLT file rather than the default one."},
+      "Use the specified dialyzer PLT file rather than the default one from"
+      " the profile's base directory."},
      {typespec_files,
       $T,
       undefined,
