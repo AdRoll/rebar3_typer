@@ -63,7 +63,10 @@ format_error(Reason) ->
 
 parse_opts(State) ->
     {CliOpts, _} = rebar_state:command_parsed_args(State),
-    parse_cli_opts(CliOpts, #{}).
+    %% rebar3 writes the PLT from running dialyzer with the tool to this path,
+    %% so there's a high chance we will find a PLT in there
+    PltFile = filename:join([rebar_dir:base_dir(State), ["rebar3", "_", rebar_utils:otp_release(), "_plt"]]),
+    parse_cli_opts(CliOpts, #{plt => PltFile}).
 
 parse_cli_opts([], Acc) ->
     Acc;
@@ -83,6 +86,8 @@ parse_cli_opts([{no_spec, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{no_spec => Bool});
 parse_cli_opts([{edoc, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{edoc => Bool});
+parse_cli_opts([{plt, undefined} | T], Acc) ->
+    parse_cli_opts(T, Acc);
 parse_cli_opts([{plt, PltFile} | T], Acc) ->
     parse_cli_opts(T, Acc#{plt => PltFile});
 parse_cli_opts([{typespec_files, Files} | T], Acc) ->
@@ -171,7 +176,8 @@ opts() ->
       undefined,
       "plt",
       string,
-      "Use the specified dialyzer PLT file rather than the default one."},
+      "Use the specified dialyzer PLT file rather than the default one from"
+      " the profile's base directory."},
      {typespec_files,
       $T,
       undefined,
