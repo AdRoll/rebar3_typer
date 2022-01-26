@@ -84,7 +84,9 @@ recursive(_Config) ->
     ct:comment("assumes reasonable defaults"),
     file:set_cwd("../../../../test/dummy"),
     {ok, DummyConfig} = file:consult("rebar.config"),
-    {ok, State6} = rebar3_typer:init(rebar_state:new(DummyConfig)),
+    {ok, State6} =
+        rebar3_typer:init(
+            rebar_state:new(DummyConfig)),
     {files_r, ["src"]} = lists:keyfind(files_r, 1, get_opts(State6)),
     file:set_cwd(Cwd),
 
