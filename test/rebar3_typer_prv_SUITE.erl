@@ -43,7 +43,12 @@ no_options(_Config) ->
             rebar_state:new()),
 
     ct:comment("Simply running typer without any parameter should use only default values"),
-    [{mode, show}] = get_opts(State),
+    RebarIo =
+        #{abort => fun rebar_api:abort/2,
+          debug => fun rebar_api:debug/2,
+          info => fun rebar_api:info/2,
+          warn => fun rebar_api:warn/2},
+    [{files_r, []}, {io, RebarIo}, {mode, show}] = get_opts(State),
 
     {comment, ""}.
 
@@ -245,16 +250,10 @@ format_error(_Config) ->
 
 get_opts(State) ->
     {ok, _} = rebar3_typer_prv:do(State),
-    DefaultIo =
-        #{abort => fun rebar_api:abort/2,
-          debug => fun rebar_api:debug/2,
-          info => fun rebar_api:info/2,
-          warn => fun rebar_api:warn/2},
     receive
-        #{opts := #{io := DefaultIo} = Opts} ->
+        #{opts := Opts} ->
             lists:sort(
-                maps:to_list(
-                    maps:remove(io, Opts)))
+                maps:to_list(Opts))
     after 500 ->
         {error, timeout}
     end.
