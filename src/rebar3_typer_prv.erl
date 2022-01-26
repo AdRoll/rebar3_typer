@@ -126,10 +126,27 @@ ensure_defaults(Opts, State) ->
 
 -spec get_plt(rebar_state:t()) -> file:filename_all().
 get_plt(State) ->
-    %% rebar3 writes the PLT from running dialyzer with the tool to this path,
-    %% so there's a high chance we will find a PLT in there
-    filename:join([rebar_dir:base_dir(State),
-                   ["rebar3", "_", rebar_utils:otp_release(), "_plt"]]).
+    %% Dialyzer lets a directory and a prefix be specified in rebar.config
+    %% So, check for those, and otherwise use the default:
+    %% base_dir/rebar3_{otp_version}_plt
+    DialyzerConfig = rebar_state:get(State, dialyzer, []),
+    Dir = case proplists:get_value(plt_location, DialyzerConfig, undefined) of
+              local ->
+                  rebar_dir:base_dir(State);
+              undefined ->
+                  rebar_dir:base_dir(State);
+              Location ->
+                  Location
+          end,
+    Prefix =
+        case proplists:get_value(plt_prefix, DialyzerConfig, undefined) of
+            undefined ->
+                "rebar3";
+            Pre ->
+                Pre
+        end,
+    Filename = Prefix ++ "_" ++ rebar_utils:otp_release() ++ "_plt",
+    filename:join(Dir, Filename).
 
 %% @todo consider adding shorthand versions to some (or all) options,
 %%       even if it doesn't exist on TypEr itself

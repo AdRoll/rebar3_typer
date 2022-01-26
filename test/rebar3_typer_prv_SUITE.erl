@@ -191,6 +191,10 @@ plt(_Config) ->
         rebar3_typer:init(
             rebar_state:new()),
 
+    ct:comment("default plt is used if unconfigured"),
+    Expected = "_build/default/rebar3_" ++ rebar_utils:otp_release() ++ "_plt",
+    {plt, Expected} = lists:keyfind(plt, 1, get_opts(State)),
+
     ct:comment("plt is correctly picked up from rebar.config"),
     State1 = rebar_state:set(State, typer, [{plt, "1.plt"}]),
     {plt, "1.plt"} = lists:keyfind(plt, 1, get_opts(State1)),
@@ -198,6 +202,17 @@ plt(_Config) ->
     ct:comment("--plt takes precedence"),
     State2 = rebar_state:command_parsed_args(State1, {[{plt, "2.plt"}], []}),
     {plt, "2.plt"} = lists:keyfind(plt, 1, get_opts(State2)),
+
+    ct:comment("plt from Dialyzer config is used"),
+    State3 =
+        rebar_state:set(State, dialyzer, [{plt_location, "dialyzer"}, {plt_prefix, "app"}]),
+    Expected3 = "dialyzer/app_" ++ rebar_utils:otp_release() ++ "_plt",
+    {plt, Expected3} = lists:keyfind(plt, 1, get_opts(State3)),
+
+    ct:comment("plt from Dialyzer config is used with local keyword"),
+    State4 = rebar_state:set(State, dialyzer, [{plt_location, local}, {plt_prefix, "app"}]),
+    Expected4 = "_build/default/app_" ++ rebar_utils:otp_release() ++ "_plt",
+    {plt, Expected4} = lists:keyfind(plt, 1, get_opts(State4)),
     {comment, ""}.
 
 %% @doc --typespec_files / typespec_files
