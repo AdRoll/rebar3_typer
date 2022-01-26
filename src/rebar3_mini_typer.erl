@@ -21,7 +21,7 @@
       info := printer(_),
       warn := printer(_),
       abort := printer(no_return())}.
--type mode() :: show | show_exported | annotate | annotate_inc_files.
+-type mode() :: show | show_exported | annotate | annotate_inc_files | annotate_in_place.
 -type opts() ::
     #{mode := mode(),
       show_succ => boolean(),
@@ -232,7 +232,7 @@ show_or_annotate(#analysis{mode = Mode, fms = Files} = Analysis) ->
             show(Analysis);
         show_exported ->
             show(Analysis);
-        annotate ->
+        Mode when Mode =:= annotate orelse Mode =:= annotate_in_place ->
             Fun = fun({File, Module}) ->
                      Info = get_final_info(File, Module, Analysis),
                      write_typed_file(File, Info, Analysis)
@@ -453,7 +453,7 @@ get_functions(File, Analysis) ->
         show_exported ->
             ExFuncs = map_dict_lookup(File, Analysis#analysis.ex_func),
             remove_module_info(ExFuncs);
-        annotate ->
+        Mode when Mode =:= annotate orelse Mode =:= annotate_in_place ->
             Funcs = map_dict_lookup(File, Analysis#analysis.func),
             remove_module_info(Funcs);
         annotate_inc_files ->
@@ -474,46 +474,62 @@ remove_module_info(FunInfoList) ->
         end,
     lists:filter(F, FunInfoList).
 
-write_typed_file(File, Info, Analysis) ->
+write_typed_file(File, Info, #analysis{mode = Mode} = Analysis) ->
     msg(info, "      Processing file: ~tp", [File], Analysis),
     Dir = filename:dirname(File),
     RootName =
         filename:basename(
             filename:rootname(File)),
     Ext = filename:extension(File),
-    TyperAnnDir = filename:join(Dir, ?TYPER_ANN_DIR),
-    TmpNewFilename = lists:concat([RootName, ".ann", Ext]),
-    NewFileName = filename:join(TyperAnnDir, TmpNewFilename),
-    case file:make_dir(TyperAnnDir) of
-        {error, Reason} ->
-            case Reason of
-                eexist -> %% TypEr dir exists; remove old typer files if they exist
-                    case file:delete(NewFileName) of
-                        ok ->
-                            ok;
-                        {error, enoent} ->
-                            ok;
-                        {error, _} ->
-                            Msg = io_lib:format("Error in deleting file ~ts\n", [NewFileName]),
+    case Mode of
+        annotate_in_place ->
+            write_typed_file(File, Info, File, Analysis);
+        _ ->
+            TyperAnnDir = filename:join(Dir, ?TYPER_ANN_DIR),
+            TmpNewFilename = lists:concat([RootName, ".ann", Ext]),
+            NewFileName = filename:join(TyperAnnDir, TmpNewFilename),
+            case file:make_dir(TyperAnnDir) of
+                {error, Reason} ->
+                    case Reason of
+                        eexist -> %% TypEr dir exists; remove old typer files if they exist
+                            delete_file(NewFileName, Analysis),
+                            write_typed_file(File, Info, NewFileName, Analysis);
+                        enospc ->
+                            Msg = io_lib:format("Not enough space in ~tp\n", [Dir]),
+                            fatal_error(Msg, Analysis);
+                        eacces ->
+                            Msg = io_lib:format("No write permission in ~tp\n", [Dir]),
+                            fatal_error(Msg, Analysis);
+                        _ ->
+                            Msg = io_lib:format("Unhandled error ~ts when writing ~tp\n",
+                                                [Reason, Dir]),
                             fatal_error(Msg, Analysis)
-                    end,
-                    write_typed_file(File, Info, NewFileName, Analysis);
-                enospc ->
-                    Msg = io_lib:format("Not enough space in ~tp\n", [Dir]),
-                    fatal_error(Msg, Analysis);
-                eacces ->
-                    Msg = io_lib:format("No write permission in ~tp\n", [Dir]),
-                    fatal_error(Msg, Analysis);
-                _ ->
-                    Msg = io_lib:format("Unhandled error ~ts when writing ~tp\n", [Reason, Dir]),
-                    fatal_error(Msg, Analysis)
-            end;
-        ok -> %% Typer dir does NOT exist
-            write_typed_file(File, Info, NewFileName, Analysis)
+                    end;
+                ok -> %% Typer dir does NOT exist
+                    write_typed_file(File, Info, NewFileName, Analysis)
+            end
     end.
 
-write_typed_file(File, Info, NewFileName, Analysis) ->
+-spec delete_file(file:filename_all(), analysis()) -> ok.
+delete_file(File, Analysis) ->
+    case file:delete(File) of
+        ok ->
+            ok;
+        {error, enoent} ->
+            ok;
+        {error, _} ->
+            Msg = io_lib:format("Error in deleting file ~ts\n", [File]),
+            fatal_error(Msg, Analysis)
+    end.
+
+write_typed_file(File, Info, NewFileName, #analysis{mode = Mode} = Analysis) ->
     {ok, Binary} = file:read_file(File),
+    case Mode of
+        annotate_in_place ->
+            delete_file(NewFileName, Analysis);
+        _ ->
+            ok
+    end,
     Chars = unicode:characters_to_list(Binary),
     write_typed_file(Chars, NewFileName, Info, 1, [], Analysis),
     msg(info, "             Saved as: ~tp", [NewFileName], Analysis).

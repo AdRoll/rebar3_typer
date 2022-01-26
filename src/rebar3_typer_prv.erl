@@ -44,8 +44,10 @@ do(State) ->
         ok = rebar3_mini_typer:run(Opts),
         {ok, State}
     catch
-        error:{unrecognized_opt, _Opt} = Error -> ?PRV_ERROR(Error);
-        error:{colliding_modes, _NewMode, _OldMode} = Error -> ?PRV_ERROR(Error)
+        error:({unrecognized_opt, _Opt} = Error) ->
+            ?PRV_ERROR(Error);
+        error:({colliding_modes, _NewMode, _OldMode} = Error) ->
+            ?PRV_ERROR(Error)
     end.
 
 -spec format_error(any()) -> iolist().
@@ -79,6 +81,8 @@ parse_cli_opts([{annotate, Bool} | T], Acc) ->
     parse_cli_opts(T, set_mode(annotate, Bool, Acc));
 parse_cli_opts([{annotate_inc_files, Bool} | T], Acc) ->
     parse_cli_opts(T, set_mode(annotate_inc_files, Bool, Acc));
+parse_cli_opts([{annotate_in_place, Bool} | T], Acc) ->
+    parse_cli_opts(T, set_mode(annotate_in_place, Bool, Acc));
 parse_cli_opts([{show_success_typings, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{show_succ => Bool});
 parse_cli_opts([{no_spec, Bool} | T], Acc) ->
@@ -170,6 +174,17 @@ opts() ->
       {boolean, false},
       "Same as --annotate but annotates all -include() files as well as all .erl files."
       " (Use this option with caution - it has not been tested much)."},
+     {annotate_in_place,
+      undefined,
+      "annotate-in-place",
+      {boolean, false},
+      "Annotate directly on the source code files, instead of dumping the annotated files in a"
+      " different directory."},
+     {annotate_in_place,
+      undefined,
+      "annotate_in_place",
+      {boolean, false},
+      "Same as --annotate-in-place."},
      {no_spec,
       undefined,
       "no_spec",

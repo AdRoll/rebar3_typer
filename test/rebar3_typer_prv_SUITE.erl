@@ -96,20 +96,24 @@ good_modes(_Config) ->
     State7 = rebar_state:command_parsed_args(State2, {[{annotate_inc_files, true}], []}),
     {mode, annotate_inc_files} = lists:keyfind(mode, 1, get_opts(State7)),
 
+    ct:comment("--annotate-in-place works"),
+    State8 = rebar_state:command_parsed_args(State2, {[{annotate_in_place, true}], []}),
+    {mode, annotate_in_place} = lists:keyfind(mode, 1, get_opts(State8)),
+
     ct:comment("on and off works"),
-    State8 =
+    State9 =
         rebar_state:command_parsed_args(State, %% without changes in rebar.config
                                         {[{show_exported, true}, {show_exported, false}], []}),
-    {mode, show} = lists:keyfind(mode, 1, get_opts(State8)),
+    {mode, show} = lists:keyfind(mode, 1, get_opts(State9)),
 
     ct:comment("many false ones"),
-    State9 =
+    State10 =
         rebar_state:command_parsed_args(State2,
                                         {[{annotate, true},
                                           {annotate_inc_files, false},
                                           {show, false}],
                                          []}),
-    {mode, annotate} = lists:keyfind(mode, 1, get_opts(State9)),
+    {mode, annotate} = lists:keyfind(mode, 1, get_opts(State10)),
 
     ct:comment("super true"),
     StateA =
