@@ -96,7 +96,7 @@ good_modes(_Config) ->
     State7 = rebar_state:command_parsed_args(State6, {[{annotate_inc_files, true}], []}),
     {mode, annotate_inc_files} = lists:keyfind(mode, 1, get_opts(State7)),
 
-    ct:comment("on an off works"),
+    ct:comment("on and off works"),
     State8 =
         rebar_state:command_parsed_args(State, %% without changes in rebar.config
                                         {[{show_exported, true}, {show_exported, false}], []}),
