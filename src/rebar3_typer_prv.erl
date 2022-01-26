@@ -174,10 +174,8 @@ dirs_from_app_discovery(State) ->
     [dir_for_app(AppInfo, Cwd) || AppInfo <- Apps].
 
 -spec dir_for_app(rebar_app_info:t(), file:filename_all()) -> file:filename_all() | [].
-dir_for_app(AppInfo, Cwd) ->
-    {ok, Dir} =
-        rebar_file_utils:path_from_ancestor(
-            rebar_app_info:dir(AppInfo), Cwd),
+dir_for_app(AppInfo, _Cwd) ->
+    Dir = rebar_app_info:dir(AppInfo),
     filename:join(Dir, "src").
 
 %% @todo consider adding shorthand versions to some (or all) options,
