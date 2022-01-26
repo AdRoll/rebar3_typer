@@ -3,6 +3,8 @@
 
 -export([init/1, do/1, format_error/1]).
 
+-define(PRV_ERROR(Reason), {error, {?MODULE, Reason}}).
+
 -ignore_xref([do/1,
               format_error/1,
               {providers, create, 1},
@@ -42,8 +44,8 @@ do(State) ->
         ok = rebar3_mini_typer:run(Opts),
         {ok, State}
     catch
-        error:{unrecognized_opt, Opt} ->
-            {error, {?MODULE, {unrecognized_opt, Opt}}}
+        error:{unrecognized_opt, _Opt} = Error -> ?PRV_ERROR(Error);
+        error:{colliding_modes, _NewMode, _OldMode} = Error -> ?PRV_ERROR(Error)
     end.
 
 -spec format_error(any()) -> iolist().
@@ -88,11 +90,7 @@ parse_cli_opts([{plt, undefined} | T], Acc) ->
 parse_cli_opts([{plt, PltFile} | T], Acc) ->
     parse_cli_opts(T, Acc#{plt => PltFile});
 parse_cli_opts([{typespec_files, Files} | T], Acc) ->
-    parse_cli_opts(T, Acc#{trusted => split_string(Files)});
-parse_cli_opts([Opt | _T], _Acc) ->
-    %% consider changing this to the rebar3 way of ?PRV_ERROR/1
-    %% TODO: catch the error
-    error({unrecognized_opt, Opt}).
+    parse_cli_opts(T, Acc#{trusted => split_string(Files)}).
 
 set_mode(Key, false, Acc = #{mode := Key}) ->
     maps:remove(mode, Acc);

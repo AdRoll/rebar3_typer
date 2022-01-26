@@ -226,10 +226,6 @@ unrecognized_opt(_Config) ->
     ct:comment("bad_opt in rebar.config"),
     State1 = rebar_state:set(State, typer, [{bad_opt, true}]),
     {unrecognized_opt, {bad_opt, true}} = get_error(State1),
-
-    ct:comment("bad_opt in command line"),
-    State2 = rebar_state:command_parsed_args(State1, {[{other_bad_opt, false}], []}),
-    {unrecognized_opt, {other_bad_opt, false}} = get_error(State2),
     {comment, ""}.
 
 %% @doc Error formatting
