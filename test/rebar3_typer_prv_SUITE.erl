@@ -43,7 +43,7 @@ no_options(_Config) ->
             rebar_state:new()),
 
     ct:comment("Simply running typer without any parameter should use only default values"),
-    [{mode, show}] = get_opts(State),
+    [{mode, show}, {plt, _}] = get_opts(State),
 
     {comment, ""}.
 

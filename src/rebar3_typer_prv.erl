@@ -38,7 +38,7 @@ do(State) ->
               info => fun rebar_api:info/2,
               warn => fun rebar_api:warn/2,
               abort => fun rebar_api:abort/2},
-        Opts = default_mode_show(Merged#{io => RebarIo}),
+        Opts = ensure_defaults(Merged#{io => RebarIo}, State),
         ok = rebar3_mini_typer:run(Opts),
         {ok, State}
     catch
@@ -83,6 +83,8 @@ parse_cli_opts([{no_spec, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{no_spec => Bool});
 parse_cli_opts([{edoc, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{edoc => Bool});
+parse_cli_opts([{plt, undefined} | T], Acc) ->
+    parse_cli_opts(T, Acc);
 parse_cli_opts([{plt, PltFile} | T], Acc) ->
     parse_cli_opts(T, Acc#{plt => PltFile});
 parse_cli_opts([{typespec_files, Files} | T], Acc) ->
@@ -110,11 +112,24 @@ split_string(String) ->
 
 %% Make sure mode is set to show, if it wasn't passed on CLI
 %% or in the config file
--spec default_mode_show(map()) -> rebar3_mini_typer:opts().
-default_mode_show(#{mode := _Anything} = Opts) ->
+-spec ensure_defaults(map(), rebar_state:t()) -> rebar3_mini_typer:opts().
+ensure_defaults(#{mode := _Anything, plt := _PltFile} = Opts, _State) ->
     Opts;
-default_mode_show(Opts) ->
-    Opts#{mode => show}.
+ensure_defaults(#{plt := _PltFile} = Opts, _State) ->
+    Opts#{mode => show};
+ensure_defaults(#{mode := _Anything} = Opts, State) ->
+    PltFile = get_plt(State),
+    Opts#{plt => PltFile};
+ensure_defaults(Opts, State) ->
+    PltFile = get_plt(State),
+    Opts#{mode => show, plt => PltFile}.
+
+-spec get_plt(rebar_state:t()) -> file:filename_all().
+get_plt(State) ->
+    %% rebar3 writes the PLT from running dialyzer with the tool to this path,
+    %% so there's a high chance we will find a PLT in there
+    filename:join([rebar_dir:base_dir(State),
+                   ["rebar3", "_", rebar_utils:otp_release(), "_plt"]]).
 
 %% @todo consider adding shorthand versions to some (or all) options,
 %%       even if it doesn't exist on TypEr itself
@@ -171,7 +186,8 @@ opts() ->
       undefined,
       "plt",
       string,
-      "Use the specified dialyzer PLT file rather than the default one."},
+      "Use the specified dialyzer PLT file rather than the default one from"
+      " the profile's base directory."},
      {typespec_files,
       $T,
       undefined,
