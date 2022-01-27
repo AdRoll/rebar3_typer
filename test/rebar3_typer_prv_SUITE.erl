@@ -79,17 +79,18 @@ recursive(_Config) ->
     State5 = rebar_state:set(State, src_dirs, ["baz"]),
     {files_r, ["baz"]} = lists:keyfind(files_r, 1, get_opts(State5)),
 
-    ct:comment("assumes reasonable defaults"),
-    Opts =
-        run_on("dummy",
-               fun() ->
-                  {ok, DummyConfig} = file:consult("rebar.config"),
-                  {ok, State6} =
-                      rebar3_typer:init(
-                          rebar_state:new(DummyConfig)),
-                  get_opts(State6)
-               end),
-    {files_r, ["src"]} = lists:keyfind(files_r, 1, Opts),
+    ct:comment("assumes reasonable defaults for regular apps"),
+    {files_r, [DummySrc]} = lists:keyfind(files_r, 1, get_opts_from("dummy")),
+    "crs/ymmud/" ++ _ = lists:reverse(DummySrc),
+
+    ct:comment("assumes reasonable defaults for umbrella apps"),
+    {files_r, [App1Src, App2Src]} = lists:keyfind(files_r, 1, get_opts_from("umbrella")),
+    "crs/1ppa/sppa/allerbmu/" ++ _ = lists:reverse(App1Src),
+    "crs/2ppa/sppa/allerbmu/" ++ _ = lists:reverse(App2Src),
+
+    ct:comment("assumes reasonable defaults as a last ditch"),
+    {files_r, ["lib/app1/src", "lib/app2/src"]} =
+        lists:keyfind(files_r, 1, get_opts_from("last-ditch")),
 
     {comment, ""}.
 
@@ -309,13 +310,19 @@ get_error(State) ->
             Error
     end.
 
-run_on(Folder, Test) ->
+get_opts_from(Folder) ->
     {ok, Cwd} = file:get_cwd(),
     try
         ok =
             file:set_cwd(
                 filename:join([code:lib_dir(rebar3_typer), "test", "files", Folder])),
-        Test()
+        {ok, RebarConfig} = file:consult("rebar.config"),
+        {ok, State0} =
+            rebar_prv_app_discovery:init(
+                rebar_state:new(RebarConfig)),
+        {ok, State1} = rebar_prv_app_discovery:do(State0),
+        {ok, State2} = rebar3_typer:init(State1),
+        get_opts(State2)
     after
         file:set_cwd(Cwd)
     end.

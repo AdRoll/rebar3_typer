@@ -182,14 +182,7 @@ infer_src_dirs(State) ->
     end.
 
 dirs_from_app_discovery(State) ->
-    Apps =
-        case rebar_state:current_app(State) of
-            undefined ->
-                rebar_state:project_apps(State);
-            AppInfo ->
-                [AppInfo]
-        end,
-    [dir_for_app(AppInfo) || AppInfo <- Apps].
+    [dir_for_app(AppInfo) || AppInfo <- rebar_state:project_apps(State)].
 
 -spec dir_for_app(rebar_app_info:t()) -> file:filename_all() | [].
 dir_for_app(AppInfo) ->
