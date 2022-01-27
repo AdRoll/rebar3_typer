@@ -64,6 +64,8 @@ parse_opts(State) ->
 
 parse_cli_opts([], Acc) ->
     Acc;
+parse_cli_opts([{files, Files} | T], Acc) ->
+    parse_cli_opts(T, Acc#{files => split_string(Files)});
 parse_cli_opts([{recursive, Dirs} | T], Acc) ->
     parse_cli_opts(T, Acc#{files_r => split_string(Dirs)});
 parse_cli_opts([{show, Bool} | T], Acc) ->
@@ -159,6 +161,8 @@ get_plt(State) ->
                           rebar3_mini_typer:opts().
 default_src_dirs(#{files_r := _Anything} = Opts, _State) ->
     Opts;
+default_src_dirs(#{files := _Anything} = Opts, _State) ->
+    Opts;
 default_src_dirs(#{} = Opts, State) ->
     case dirs_from_app_discovery(State) of
         [] ->
@@ -196,6 +200,7 @@ opts() ->
       undefined,
       string,
       "Search comma-separated directories recursively for .erl files below them."},
+     {files, $f, undefined, string, "Files to analyze."},
      {show,
       undefined,
       "show",
@@ -280,7 +285,8 @@ parse_rebar_config({Key, Value}, Opts)
          Key == plt;
          Key == typespec_files;
          Key == no_spec;
-         Key == recursive ->
+         Key == recursive;
+         Key == files ->
     Opts#{Key => Value};
 parse_rebar_config(Opt, _Opts) ->
     error({unrecognized_opt, Opt}).
