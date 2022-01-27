@@ -51,10 +51,10 @@
          %% Files in 'fms' are compilable with option 'to_pp'; we keep them
          %% as {FileName, ModuleName} in case the ModuleName is different
          fms = [] :: [{file:filename(), module()}],
-         ex_func = map_dict_new() :: map_dict(),
-         record = map_dict_new() :: map_dict(),
-         func = map_dict_new() :: map_dict(),
-         inc_func = map_dict_new() :: map_dict(),
+         ex_func = map_new() :: map(),
+         record = map_new() :: map(),
+         func = map_new() :: map(),
+         inc_func = map_new() :: map(),
          trust_plt = dialyzer_plt:new() :: dialyzer_plt:plt(),
          io = default_io() :: io()}).
 
@@ -221,9 +221,9 @@ get_external(Exts, Plt) ->
 -record(info,
         {records = maps:new() :: erl_types:type_table(),
          functions = [] :: [func_info()],
-         types = map_dict_new() :: map_dict(),
+         types = map_new() :: map(),
          edoc = false :: boolean()}).
--record(inc, {map = map_dict_new() :: map_dict(), filter = [] :: [file:filename()]}).
+-record(inc, {map = map_new() :: map(), filter = [] :: [file:filename()]}).
 
 -type inc() :: #inc{}.
 
@@ -257,13 +257,13 @@ write_and_collect_inc_info(Analysis) ->
 
 write_inc_files(Inc, Analysis) ->
     Fun = fun(File) ->
-             Val = map_dict_lookup(File, Inc#inc.map),
+             Val = map_lookup(File, Inc#inc.map),
              %% Val is function with its type info
              %% in form [{{Line,F,A},Type}]
              Functions = [Key || {Key, _} <- Val],
              Val1 = [{{F, A}, Type} || {{_Line, F, A}, Type} <- Val],
              Info =
-                 #info{types = map_dict_from_list(Val1),
+                 #info{types = map_from_list(Val1),
                        records = maps:new(),
                        %% Note we need to sort functions here!
                        functions = lists:keysort(1, Functions)},
@@ -272,7 +272,7 @@ write_inc_files(Inc, Analysis) ->
              msg(debug, "Records ~tp", [Info#info.records], Analysis),
              write_typed_file(File, Info, Analysis)
           end,
-    lists:foreach(Fun, dict:fetch_keys(Inc#inc.map)).
+    lists:foreach(Fun, maps:keys(Inc#inc.map)).
 
 show(Analysis) ->
     Fun = fun({File, Module}) ->
@@ -338,17 +338,17 @@ check_imported_functions({File, {Line, F, A}}, Inc, Types, Analysis) ->
     IncMap = Inc#inc.map,
     FA = {F, A},
     Type = get_type_info(FA, Types, Analysis),
-    case map_dict_lookup(File, IncMap) of
+    case map_lookup(File, IncMap) of
         none -> %% File is not added. Add it
             Obj = {File, [{FA, {Line, Type}}]},
-            NewMap = map_dict_insert(Obj, IncMap),
+            NewMap = map_insert(Obj, IncMap),
             Inc#inc{map = NewMap};
         Val -> %% File is already in. Check.
             case lists:keyfind(FA, 1, Val) of
                 false ->
                     %% Function is not in; add it
                     Obj = {File, Val ++ [{FA, {Line, Type}}]},
-                    NewMap = map_dict_insert(Obj, IncMap),
+                    NewMap = map_insert(Obj, IncMap),
                     Inc#inc{map = NewMap};
                 Type ->
                     %% Function is in and with same type
@@ -360,9 +360,9 @@ check_imported_functions({File, {Line, F, A}}, Inc, Types, Analysis) ->
                     NewMap =
                         case Elem of
                             [] ->
-                                map_dict_remove(File, IncMap);
+                                map_remove(File, IncMap);
                             _ ->
-                                map_dict_insert({File, Elem}, IncMap)
+                                map_insert({File, Elem}, IncMap)
                         end,
                     Inc#inc{map = NewMap}
             end
@@ -380,18 +380,18 @@ clean_inc(Inc) ->
     normalize_obj(Inc1).
 
 remove_yecc_generated_file(#inc{filter = Filter} = Inc) ->
-    Fun = fun(Key, #inc{map = Map} = I) -> I#inc{map = map_dict_remove(Key, Map)} end,
+    Fun = fun(Key, #inc{map = Map} = I) -> I#inc{map = map_remove(Key, Map)} end,
     lists:foldl(Fun, Inc, Filter).
 
 normalize_obj(TmpInc) ->
     Fun = fun(Key, Val, Inc) ->
              NewVal = [{{Line, F, A}, Type} || {{F, A}, {Line, Type}} <- Val],
-             map_dict_insert({Key, NewVal}, Inc)
+             map_insert({Key, NewVal}, Inc)
           end,
-    TmpInc#inc{map = map_dict_fold(Fun, map_dict_new(), TmpInc#inc.map)}.
+    TmpInc#inc{map = map_fold(Fun, map_new(), TmpInc#inc.map)}.
 
 get_records(File, Analysis) ->
-    map_dict_lookup(File, Analysis#analysis.record).
+    map_lookup(File, Analysis#analysis.record).
 
 get_types(Module, Analysis, Records) ->
     TypeInfoPlt = Analysis#analysis.trust_plt,
@@ -410,7 +410,7 @@ get_types(Module, Analysis, Records) ->
             false ->
                 [get_type(I, CodeServer, Records, Analysis) || I <- TypeInfo]
         end,
-    map_dict_from_list(TypeInfoList).
+    map_from_list(TypeInfoList).
 
 convert_type_info({{_M, F, A}, Range, Arg}) ->
     {{F, A}, {Range, Arg}}.
@@ -449,17 +449,17 @@ get_type({{M, F, A} = MFA, Range, Arg}, CodeServer, Records, Analysis) ->
 get_functions(File, Analysis) ->
     case Analysis#analysis.mode of
         show ->
-            Funcs = map_dict_lookup(File, Analysis#analysis.func),
-            IncFuncs = map_dict_lookup(File, Analysis#analysis.inc_func),
+            Funcs = map_lookup(File, Analysis#analysis.func),
+            IncFuncs = map_lookup(File, Analysis#analysis.inc_func),
             remove_module_info(Funcs) ++ normalize_inc_funcs(IncFuncs);
         show_exported ->
-            ExFuncs = map_dict_lookup(File, Analysis#analysis.ex_func),
+            ExFuncs = map_lookup(File, Analysis#analysis.ex_func),
             remove_module_info(ExFuncs);
         Mode when Mode =:= annotate orelse Mode =:= annotate_in_place ->
-            Funcs = map_dict_lookup(File, Analysis#analysis.func),
+            Funcs = map_lookup(File, Analysis#analysis.func),
             remove_module_info(Funcs);
         annotate_inc_files ->
-            map_dict_lookup(File, Analysis#analysis.inc_func)
+            map_lookup(File, Analysis#analysis.inc_func)
     end.
 
 normalize_inc_funcs(Functions) ->
@@ -605,7 +605,7 @@ show_type_info(File, Info, Analysis) ->
     lists:foreach(Fun, Info#info.functions).
 
 get_type_info(Func, Types, Analysis) ->
-    case map_dict_lookup(Func, Types) of
+    case map_lookup(Func, Types) of
         none ->
             %% Note: Typeinfo of any function should exist in
             %% the result offered by dialyzer, otherwise there
@@ -897,15 +897,15 @@ analyze_core_tree(Core, Records, SpecInfo, CbInfo, ExpTypes, Analysis, File) ->
     Fun = fun analyze_one_function/2,
     AllDefs = cerl:module_defs(Tree),
     Acc = lists:foldl(Fun, #tmpAcc{file = File, module = Module}, AllDefs),
-    ExportedFuncMap = map_dict_insert({File, ExFuncs}, Analysis#analysis.ex_func),
+    ExportedFuncMap = map_insert({File, ExFuncs}, Analysis#analysis.ex_func),
     %% we must sort all functions in the file which
     %% originate from this file by *numerical order* of lineNo
     SortedFunctions = lists:keysort(1, Acc#tmpAcc.funcAcc),
-    FuncMap = map_dict_insert({File, SortedFunctions}, Analysis#analysis.func),
+    FuncMap = map_insert({File, SortedFunctions}, Analysis#analysis.func),
     %% we do not need to sort functions which are imported from included files
-    IncFuncMap = map_dict_insert({File, Acc#tmpAcc.incFuncAcc}, Analysis#analysis.inc_func),
+    IncFuncMap = map_insert({File, Acc#tmpAcc.incFuncAcc}, Analysis#analysis.inc_func),
     FMs = Analysis#analysis.fms ++ [{File, Module}],
-    RecordMap = map_dict_insert({File, Records}, Analysis#analysis.record),
+    RecordMap = map_insert({File, Records}, Analysis#analysis.record),
     Analysis#analysis{fms = FMs,
                       callgraph = CG,
                       codeserver = CS6,
@@ -1047,37 +1047,35 @@ rcv_ext_types(Self, ExtTypes) ->
 %% specialized for the uses in this module
 %%--------------------------------------------------------------------
 
--type map_dict() :: dict:dict().
+-spec map_new() -> #{}.
+map_new() ->
+    maps:new().
 
--spec map_dict_new() -> map_dict().
-map_dict_new() ->
-    dict:new().
-
--spec map_dict_insert({term(), term()}, map_dict()) -> map_dict().
-map_dict_insert(Object, Map) ->
+-spec map_insert({term(), term()}, map()) -> map().
+map_insert(Object, Map) ->
     {Key, Value} = Object,
-    dict:store(Key, Value, Map).
+    maps:put(Key, Value, Map).
 
--spec map_dict_lookup(term(), map_dict()) -> term().
-map_dict_lookup(Key, Map) ->
+-spec map_lookup(term(), map()) -> term().
+map_lookup(Key, Map) ->
     try
-        dict:fetch(Key, Map)
+        maps:get(Key, Map)
     catch
         error:_ ->
             none
     end.
 
--spec map_dict_from_list([{fa(), term()}]) -> map_dict().
-map_dict_from_list(List) ->
-    dict:from_list(List).
+-spec map_from_list([{fa(), term()}]) -> map().
+map_from_list(List) ->
+    maps:from_list(List).
 
--spec map_dict_remove(term(), map_dict()) -> map_dict().
-map_dict_remove(Key, Dict) ->
-    dict:erase(Key, Dict).
+-spec map_remove(term(), map()) -> map().
+map_remove(Key, Map) ->
+    maps:remove(Key, Map).
 
--spec map_dict_fold(fun((term(), term(), term()) -> map_dict()),
-                    map_dict(),
-                    map_dict()) ->
-                       map_dict().
-map_dict_fold(Fun, Acc0, Dict) ->
-    dict:fold(Fun, Acc0, Dict).
+-spec map_fold(fun((term(), term(), term()) -> map()),
+                    map(),
+                    map()) ->
+                       map().
+map_fold(Fun, Acc0, Map) ->
+    maps:fold(Fun, Acc0, Map).
