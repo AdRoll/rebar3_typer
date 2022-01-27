@@ -5,10 +5,10 @@
 
 -export([all/0]).
 -export([empty/1, bad_plt/1, single_file/1, annotate/1, trusted/1, show_succ/1, files/1,
-         def/1, no_spec/1]).
+         def/1, no_spec/1, ann_erl/1]).
 
 all() ->
-    [empty, bad_plt, single_file, annotate, trusted, show_succ, files, def, no_spec].
+    [empty, bad_plt, single_file, annotate, trusted, show_succ, files, def, no_spec, ann_erl].
 
 empty(_) ->
     ct:comment("With no files... we get an error"),
@@ -151,6 +151,16 @@ no_spec(_) ->
      {info, <<"%% ----", _/binary>>},
      {info, <<"-spec specced() -> 'true'.">>}] =
         run_typer(#{files_r => [abs_test_path("no_spec")], no_spec => true}),
+    {comment, ""}.
+
+ann_erl(_) ->
+    ct:comment(".ann.erl files are ignored"),
+    [{abort, <<"typer: no file(s) to analyze">>}] =
+        run_typer(#{files_r => [abs_test_path("ann_erl")]}),
+
+    ct:comment(".ann.erl files are ignored even when explicitely required"),
+    [{abort, <<"typer: no file(s) to analyze">>}] =
+        run_typer(#{files => [abs_test_path("ann_erl/ignore.ann.erl")]}),
     {comment, ""}.
 
 %%% PRIVATE FUNCTIONS
