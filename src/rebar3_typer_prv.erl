@@ -78,8 +78,6 @@ parse_cli_opts([{no_spec, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{no_spec => Bool});
 parse_cli_opts([{edoc, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{edoc => Bool});
-parse_cli_opts([{plt, undefined} | T], Acc) ->
-    parse_cli_opts(T, Acc);
 parse_cli_opts([{plt, PltFile} | T], Acc) ->
     parse_cli_opts(T, Acc#{plt => PltFile});
 parse_cli_opts([{typespec_files, Files} | T], Acc) ->
