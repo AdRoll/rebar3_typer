@@ -176,7 +176,7 @@ infer_src_dirs(State) ->
     FromState = SrcDirs ++ Extra ++ SubDirs,
     case FromState of
         [] ->
-            filelib:wildcard("{src,lib,apps}"); % last ditch
+            filelib:wildcard("{src,lib/*/src,apps/*/src}"); % last ditch
         Dirs ->
             Dirs
     end.
