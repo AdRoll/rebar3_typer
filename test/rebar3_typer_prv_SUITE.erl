@@ -4,7 +4,7 @@
 -behaviour(ct_suite).
 
 -export([all/0, init_per_testcase/2, end_per_testcase/2]).
--export([no_options/1, recursive/1, good_modes/1, colliding_modes/1,
+-export([no_options/1, recursive/1, files/1, good_modes/1, colliding_modes/1,
          show_success_typings/1, no_spec/1, edoc/1, plt/1, typespec_files/1, unrecognized_opt/1,
          format_error/1]).
 
@@ -91,6 +91,29 @@ recursive(_Config) ->
     ct:comment("assumes reasonable defaults as a last ditch"),
     {files_r, ["lib/app1/src", "lib/app2/src"]} =
         lists:keyfind(files_r, 1, get_opts_from("last-ditch")),
+
+    {comment, ""}.
+
+%% @doc --files / files
+files(_Config) ->
+    {ok, State} =
+        rebar3_typer:init(
+            rebar_state:new()),
+
+    ct:comment("files is correctly picked up from rebar.config"),
+    Files = ["files/dummy/src/dummy.erl"],
+    State1 = rebar_state:set(State, typer, [{files, Files}]),
+    {files, Files} = lists:keyfind(files, 1, get_opts(State1)),
+
+    ct:comment("files prevents default files_r"),
+    {files_r, []} = lists:keyfind(files_r, 1, get_opts(State1)),
+
+    ct:comment("--files takes precedence over rebar.config"),
+    State2 = rebar_state:command_parsed_args(State1, {[{files, "files/single_file/single.erl"}], []}),
+    {files, ["files/single_file/single.erl"]} = lists:keyfind(files, 1, get_opts(State2)),
+
+    ct:comment("--files prevents default files_r"),
+    {files_r, []} = lists:keyfind(files_r, 1, get_opts(State2)),
 
     {comment, ""}.
 

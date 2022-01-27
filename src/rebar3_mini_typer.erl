@@ -29,6 +29,7 @@
       edoc => boolean(),
       plt => file:filename(),
       trusted => [file:filename()],
+      files => [file:filename()],
       files_r => [file:filename_all()],
       io => io()}.
 
