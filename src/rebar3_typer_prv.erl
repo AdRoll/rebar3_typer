@@ -38,7 +38,9 @@ do(State) ->
         {ok, State}
     catch
         error:{unrecognized_opt, Opt} ->
-            {error, {?MODULE, {unrecognized_opt, Opt}}}
+            {error, {?MODULE, {unrecognized_opt, Opt}}};
+        error:{colliding_modes, NewMode, OldMode} ->
+            {error, {?MODULE, {colliding_modes, NewMode, OldMode}}}
     end.
 
 -spec format_error(any()) -> iolist().
@@ -72,6 +74,8 @@ parse_cli_opts([{annotate, Bool} | T], Acc) ->
     parse_cli_opts(T, set_mode(annotate, Bool, Acc));
 parse_cli_opts([{annotate_inc_files, Bool} | T], Acc) ->
     parse_cli_opts(T, set_mode(annotate_inc_files, Bool, Acc));
+parse_cli_opts([{annotate_in_place, Bool} | T], Acc) ->
+    parse_cli_opts(T, set_mode(annotate_in_place, Bool, Acc));
 parse_cli_opts([{show_success_typings, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{show_succ => Bool});
 parse_cli_opts([{no_spec, Bool} | T], Acc) ->
@@ -81,11 +85,7 @@ parse_cli_opts([{edoc, Bool} | T], Acc) ->
 parse_cli_opts([{plt, PltFile} | T], Acc) ->
     parse_cli_opts(T, Acc#{plt => PltFile});
 parse_cli_opts([{typespec_files, Files} | T], Acc) ->
-    parse_cli_opts(T, Acc#{trusted => split_string(Files)});
-parse_cli_opts([Opt | _T], _Acc) ->
-    %% consider changing this to the rebar3 way of ?PRV_ERROR/1
-    %% TODO: catch the error
-    error({unrecognized_opt, Opt}).
+    parse_cli_opts(T, Acc#{trusted => split_string(Files)}).
 
 set_mode(Key, false, Acc = #{mode := Key}) ->
     maps:remove(mode, Acc);
@@ -185,7 +185,8 @@ dirs_from_app_discovery(State) ->
 -spec dir_for_app(rebar_app_info:t()) -> file:filename_all() | [].
 dir_for_app(AppInfo) ->
     Dir = rebar_app_info:dir(AppInfo),
-    filename:join(Dir, "src").
+    rebar_dir:make_relative_path(
+        filename:join(Dir, "src"), rebar_dir:get_cwd()).
 
 %% @todo consider adding shorthand versions to some (or all) options,
 %%       even if it doesn't exist on TypEr itself
@@ -228,6 +229,17 @@ opts() ->
       {boolean, false},
       "Same as --annotate but annotates all -include() files as well as all .erl files."
       " (Use this option with caution - it has not been tested much)."},
+     {annotate_in_place,
+      undefined,
+      "annotate-in-place",
+      {boolean, false},
+      "Annotate directly on the source code files, instead of dumping the annotated files in a"
+      " different directory."},
+     {annotate_in_place,
+      undefined,
+      "annotate_in_place",
+      {boolean, false},
+      "Same as --annotate-in-place."},
      {no_spec,
       undefined,
       "no_spec",

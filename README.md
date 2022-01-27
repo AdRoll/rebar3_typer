@@ -36,15 +36,17 @@ Usage: rebar3 typer [-r <recursive>] [--show [<show>]]
                     [--show_success_typings [<show_success_typings>]]
                     [--annotate [<annotate>]]
                     [--annotate-inc-files [<annotate_inc_files>]]
+                    [--annotate-in-place [<annotate_in_place>]]
+                    [--annotate_in_place [<annotate_in_place>]]
                     [--no_spec [<no_spec>]] [--edoc [<edoc>]]
-                    [--plt <plt>] [-T <typespec_files>] [-v]
+                    [--plt <plt>] [-T <typespec_files>]
 
   -r                      Search comma-separated directories recursively
                           for .erl files below them.
   --show                  Print type specifications for all functions on
-                          stdout. [default: true]
+                          stdout. [default: false]
   --show-exported         Same as --show, but print specifications for
-                          exported functions only. Specs are displayed
+                          exported functions only.Specs are displayed
                           sorted alphabetically on the function's name.
                           [default: false]
   --show_exported         Same as --show-exported. [default: false]
@@ -59,12 +61,17 @@ Usage: rebar3 typer [-r <recursive>] [--show [<show>]]
                           files as well as all .erl files. (Use this
                           option with caution - it has not been tested
                           much). [default: false]
+  --annotate-in-place     Annotate directly on the source code files,
+                          instead of dumping the annotated files in a
+                          different directory. [default: false]
+  --annotate_in_place     Same as --annotate-in-place. [default: false]
   --no_spec               Ignore the specs from the files. This is an
                           undocumented option. [default: false]
   --edoc                  Print type information as Edoc @spec comments,
                           not as type specs. [default: false]
   --plt                   Use the specified dialyzer PLT file rather than
-                          the default one.
+                          the default one from the profile's base
+                          directory.
   -T                      The specified file(s) already contain type
                           specifications and these are to be trusted in
                           order to print specs for the rest of the files.
@@ -76,7 +83,7 @@ You can also put those options directly in your `rebar.config` file:
 
 ```erlang
 {typer,
-    [{mode, show},                  %% Results mode: show | show_exported | annotate | annotate_inc_files
+    [{mode, show},                  %% Results mode: show | show_exported | annotate | annotate_inc_files | annotate_in_place
      {edoc, false},                 %% Print type information as Edoc @spec comments, not as type specs.
      {plt, "/path/to/plt"},         %% Use the specified dialyzer PLT file rather than the default one.
      {show_success_typings, false}, %% Show the success typings inferred by Dialyzer / Typer.

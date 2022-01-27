@@ -80,13 +80,11 @@ recursive(_Config) ->
     {files_r, ["baz"]} = lists:keyfind(files_r, 1, get_opts(State5)),
 
     ct:comment("assumes reasonable defaults for regular apps"),
-    {files_r, [DummySrc]} = lists:keyfind(files_r, 1, get_opts_from("dummy")),
-    "crs/ymmud/" ++ _ = lists:reverse(DummySrc),
+    {files_r, ["src"]} = lists:keyfind(files_r, 1, get_opts_from("dummy")),
 
     ct:comment("assumes reasonable defaults for umbrella apps"),
-    {files_r, [App1Src, App2Src]} = lists:keyfind(files_r, 1, get_opts_from("umbrella")),
-    "crs/1ppa/sppa/allerbmu/" ++ _ = lists:reverse(App1Src),
-    "crs/2ppa/sppa/allerbmu/" ++ _ = lists:reverse(App2Src),
+    {files_r, ["apps/app1/src", "apps/app2/src"]} =
+        lists:keyfind(files_r, 1, get_opts_from("umbrella")),
 
     ct:comment("assumes reasonable defaults as a last ditch"),
     {files_r, ["lib/app1/src", "lib/app2/src"]} =
@@ -127,20 +125,24 @@ good_modes(_Config) ->
     State7 = rebar_state:command_parsed_args(State2, {[{annotate_inc_files, true}], []}),
     {mode, annotate_inc_files} = lists:keyfind(mode, 1, get_opts(State7)),
 
+    ct:comment("--annotate-in-place works"),
+    State8 = rebar_state:command_parsed_args(State2, {[{annotate_in_place, true}], []}),
+    {mode, annotate_in_place} = lists:keyfind(mode, 1, get_opts(State8)),
+
     ct:comment("on and off works"),
-    State8 =
+    State9 =
         rebar_state:command_parsed_args(State, %% without changes in rebar.config
                                         {[{show_exported, true}, {show_exported, false}], []}),
-    {mode, show} = lists:keyfind(mode, 1, get_opts(State8)),
+    {mode, show} = lists:keyfind(mode, 1, get_opts(State9)),
 
     ct:comment("many false ones"),
-    State9 =
+    State10 =
         rebar_state:command_parsed_args(State2,
                                         {[{annotate, true},
                                           {annotate_inc_files, false},
                                           {show, false}],
                                          []}),
-    {mode, annotate} = lists:keyfind(mode, 1, get_opts(State9)),
+    {mode, annotate} = lists:keyfind(mode, 1, get_opts(State10)),
 
     ct:comment("super true"),
     StateA =
@@ -272,10 +274,6 @@ unrecognized_opt(_Config) ->
     ct:comment("bad_opt in rebar.config"),
     State1 = rebar_state:set(State, typer, [{bad_opt, true}]),
     {unrecognized_opt, {bad_opt, true}} = get_error(State1),
-
-    ct:comment("bad_opt in command line"),
-    State2 = rebar_state:command_parsed_args(State1, {[{other_bad_opt, false}], []}),
-    {unrecognized_opt, {other_bad_opt, false}} = get_error(State2),
     {comment, ""}.
 
 %% @doc Error formatting
