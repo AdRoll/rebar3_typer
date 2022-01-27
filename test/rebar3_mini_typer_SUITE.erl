@@ -4,10 +4,10 @@
 -behaviour(ct_suite).
 
 -export([all/0]).
--export([empty/1, single_file/1, annotate/1]).
+-export([empty/1, bad_plt/1, single_file/1, annotate/1]).
 
 all() ->
-    [empty, single_file, annotate].
+    [empty, bad_plt, single_file, annotate].
 
 empty(_) ->
     ct:comment("With no files... we get an error"),
@@ -20,6 +20,13 @@ empty(_) ->
     ct:comment("With an empty folder... we get an error"),
     [{abort, <<"typer: no file(s) to analyze">>}] =
         run_typer(#{files_r => [abs_test_path("empty")]}),
+    {comment, ""}.
+
+bad_plt(_) ->
+    ct:comment("With an invalid plt.. we get an error"),
+    [{abort,
+      <<"typer: Dialyzer's PLT is missing or is not up-to-date; please (re)create it">>}] =
+        run_typer(#{files_r => [abs_test_path("single_file")], plt => "bad.plt"}),
     {comment, ""}.
 
 single_file(_) ->
@@ -56,7 +63,10 @@ annotate(_) ->
 %%% PRIVATE FUNCTIONS
 
 run_typer(Opts) ->
-    DefaultOpts = #{mode => show, io => default_io()},
+    DefaultOpts =
+        #{plt => default_plt(),
+          mode => show,
+          io => default_io()},
     try rebar3_mini_typer:run(
             maps:merge(DefaultOpts, Opts))
     of
@@ -68,14 +78,31 @@ run_typer(Opts) ->
     end,
     collect_io().
 
+%% @doc rebar3 writes the PLT from running dialyzer with the tool to this path,
+%%      so there's a high chance we will find a PLT in there.
+default_plt() ->
+    filename:join([code:lib_dir(rebar3_typer),
+                   "..",
+                   "..",
+                   ["rebar3", "_", rebar_utils:otp_release(), "_plt"]]).
+
 default_io() ->
     Self = self(),
-    Swallow = fun(_Format, _Data) -> swallowed end,
+    Swallow =
+        fun(Format, Data) ->
+           ct:pal(Format, Data),
+           swallowed
+        end,
     Send = fun(Level) -> fun(Format, Data) -> Self ! {io, Level, Format, Data} end end,
     SendAndAbort =
         fun(Format, Data) ->
            Self ! {io, abort, Format, Data},
-           error(aborted)
+           case rand:uniform() of
+               -0.1 ->
+                   {to, fool, dialyzer};
+               _ ->
+                   error(aborted)
+           end
         end,
     #{debug => Swallow,
       info => Send(info),
@@ -94,5 +121,4 @@ collect_io(Acc) ->
     end.
 
 abs_test_path(FilePath) ->
-    filename:join(
-        code:lib_dir(rebar3_typer), "test/files/" ++ FilePath).
+    filename:join([code:lib_dir(rebar3_typer), "test", "files", FilePath]).
