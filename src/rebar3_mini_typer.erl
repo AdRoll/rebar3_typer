@@ -660,13 +660,7 @@ analyze_result({plt, Plt}, Args, Analysis) ->
 analyze_result({show_succ, Value}, Args, Analysis) ->
     {Args, Analysis#analysis{show_succ = Value}};
 analyze_result({no_spec, Value}, Args, Analysis) ->
-    {Args, Analysis#analysis{no_spec = Value}};
-analyze_result({pa, Dir}, Args, Analysis) ->
-    true = code:add_patha(Dir),
-    {Args, Analysis};
-analyze_result({pz, Dir}, Args, Analysis) ->
-    true = code:add_pathz(Dir),
-    {Args, Analysis}.
+    {Args, Analysis#analysis{no_spec = Value}}.
 
 %%--------------------------------------------------------------------
 %% File processing.
