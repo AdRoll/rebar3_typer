@@ -4,10 +4,10 @@
 -behaviour(ct_suite).
 
 -export([all/0]).
--export([empty/1, bad_plt/1, single_file/1, annotate/1, trusted/1]).
+-export([empty/1, bad_plt/1, single_file/1, annotate/1, trusted/1, show_succ/1]).
 
 all() ->
-    [empty, bad_plt, single_file, annotate, trusted].
+    [empty, bad_plt, single_file, annotate, trusted, show_succ].
 
 empty(_) ->
     ct:comment("With no files... we get an error"),
@@ -78,6 +78,20 @@ trusted(_) ->
      {info, <<"%% ----", _/binary>>}] =
         run_typer(#{files_r => [abs_test_path("trusted")],
                     trusted => [abs_test_path("trusted/empty.erl")]}),
+    {comment, ""}.
+
+show_succ(_) ->
+    ct:comment("Show original contract if false"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec spec() -> boolean().">>}] =
+        run_typer(#{files_r => [abs_test_path("show_succ")], show_succ => false}),
+
+    ct:comment("Show success typing if true"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec spec() -> 'false'.">>}] =
+        run_typer(#{files_r => [abs_test_path("show_succ")], show_succ => true}),
     {comment, ""}.
 
 %%% PRIVATE FUNCTIONS
