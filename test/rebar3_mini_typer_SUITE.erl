@@ -48,11 +48,23 @@ single_file(_) ->
 annotate(_) ->
     _ = file:del_dir_r(abs_test_path("annotate/typer_ann")),
     ct:comment("With mode:annotate... only erl files are annotated"),
-    test_annotate_mode(annotate).
+    {ok, FileInfo0} = test_annotate_mode(annotate),
+    ct:comment("Even if run twice on a row"),
+    %% ensure TypEr deleted and re-wrote the files with the same contents
+    %% by running it a second time
+    {ok, FileInfo1} = test_annotate_mode(annotate),
+    false = FileInfo0 == FileInfo1,
+    {comment, ""}.
 
 annotate_in_place(_) ->
     ct:comment("With mode:annotate_in_place... only erl files are directly annotated"),
-    test_annotate_mode(annotate_in_place).
+    {ok, FileInfo0} = test_annotate_mode(annotate_in_place),
+    ct:comment("Even if run twice on a row"),
+    %% ensure TypEr deleted and re-wrote the files with the same contents
+    %% by running it a second time
+    {ok, FileInfo1} = test_annotate_mode(annotate_in_place),
+    false = FileInfo0 == FileInfo1,
+    {comment, ""}.
 
 %%% PRIVATE FUNCTIONS
 
@@ -73,7 +85,7 @@ test_annotate_mode(Mode) ->
                 nomatch = string:find(Path1, ".ann.erl", trailing),
                 ".erl" = string:find(Path1, ".erl", trailing)
         end,
-    {comment, ""}.
+    file:read_file_info(Path1).
 
 run_typer(Opts) ->
     DefaultOpts =

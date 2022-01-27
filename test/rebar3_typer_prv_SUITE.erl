@@ -80,13 +80,11 @@ recursive(_Config) ->
     {files_r, ["baz"]} = lists:keyfind(files_r, 1, get_opts(State5)),
 
     ct:comment("assumes reasonable defaults for regular apps"),
-    {files_r, [DummySrc]} = lists:keyfind(files_r, 1, get_opts_from("dummy")),
-    "crs" ++ _ = lists:reverse(DummySrc),
+    {files_r, ["src"]} = lists:keyfind(files_r, 1, get_opts_from("dummy")),
 
     ct:comment("assumes reasonable defaults for umbrella apps"),
-    {files_r, [App1Src, App2Src]} = lists:keyfind(files_r, 1, get_opts_from("umbrella")),
-    "crs/1ppa/sppa" ++ _ = lists:reverse(App1Src),
-    "crs/2ppa/sppa" ++ _ = lists:reverse(App2Src),
+    {files_r, ["apps/app1/src", "apps/app2/src"]} =
+        lists:keyfind(files_r, 1, get_opts_from("umbrella")),
 
     ct:comment("assumes reasonable defaults as a last ditch"),
     {files_r, ["lib/app1/src", "lib/app2/src"]} =
