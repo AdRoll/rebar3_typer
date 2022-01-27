@@ -58,8 +58,6 @@ recursive(_Config) ->
         rebar3_typer:init(
             rebar_state:new()),
 
-    {ok, Cwd} = file:get_cwd(),
-
     ct:comment("files_r is correctly picked up from rebar.config"),
     Files = ["src/", "test/"],
     State1 = rebar_state:set(State, typer, [{recursive, Files}]),
@@ -82,13 +80,16 @@ recursive(_Config) ->
     {files_r, ["baz"]} = lists:keyfind(files_r, 1, get_opts(State5)),
 
     ct:comment("assumes reasonable defaults"),
-    file:set_cwd("../../../../test/dummy"),
-    {ok, DummyConfig} = file:consult("rebar.config"),
-    {ok, State6} =
-        rebar3_typer:init(
-            rebar_state:new(DummyConfig)),
-    {files_r, ["src"]} = lists:keyfind(files_r, 1, get_opts(State6)),
-    file:set_cwd(Cwd),
+    Opts =
+        run_on("dummy",
+               fun() ->
+                  {ok, DummyConfig} = file:consult("rebar.config"),
+                  {ok, State6} =
+                      rebar3_typer:init(
+                          rebar_state:new(DummyConfig)),
+                  get_opts(State6)
+               end),
+    {files_r, ["src"]} = lists:keyfind(files_r, 1, Opts),
 
     {comment, ""}.
 
@@ -306,4 +307,15 @@ get_error(State) ->
     catch
         error:Error ->
             Error
+    end.
+
+run_on(Folder, Test) ->
+    {ok, Cwd} = file:get_cwd(),
+    try
+        ok =
+            file:set_cwd(
+                filename:join([code:lib_dir(rebar3_typer), "test", "files", Folder])),
+        Test()
+    after
+        file:set_cwd(Cwd)
     end.

@@ -175,8 +175,8 @@ infer_src_dirs(State) ->
     SubDirs = rebar_state:get(State, sub_dirs, []),
     FromState = SrcDirs ++ Extra ++ SubDirs,
     case FromState of
-        [] ->
-            filelib:wildcard("{src,lib/*/src,apps/*/src}"); % last ditch
+        [] -> % last ditch
+            filelib:wildcard("src") ++ filelib:wildcard("{lib,apps}/*/src");
         Dirs ->
             Dirs
     end.
