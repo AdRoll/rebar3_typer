@@ -30,6 +30,7 @@
       plt => file:filename(),
       trusted => [file:filename()],
       files_r => [file:filename_all()],
+      macros => [{atom(), term()}],
       io => io()}.
 
 -export_type([opts/0]).
@@ -649,9 +650,8 @@ analyze_result({io, Val}, Args, Analysis) ->
     {Args, Analysis#analysis{io = Val}};
 analyze_result({mode, Mode}, Args, Analysis) ->
     {Args, Analysis#analysis{mode = Mode}};
-analyze_result({def, Val}, Args, Analysis) ->
-    NewVal = Analysis#analysis.macros ++ [Val],
-    {Args, Analysis#analysis{macros = NewVal}};
+analyze_result({macros, Macros}, Args, Analysis) ->
+    {Args, Analysis#analysis{macros = Macros}};
 analyze_result({inc, Val}, Args, Analysis) ->
     NewVal = Analysis#analysis.includes ++ [Val],
     {Args, Analysis#analysis{includes = NewVal}};
@@ -660,13 +660,7 @@ analyze_result({plt, Plt}, Args, Analysis) ->
 analyze_result({show_succ, Value}, Args, Analysis) ->
     {Args, Analysis#analysis{show_succ = Value}};
 analyze_result({no_spec, Value}, Args, Analysis) ->
-    {Args, Analysis#analysis{no_spec = Value}};
-analyze_result({pa, Dir}, Args, Analysis) ->
-    true = code:add_patha(Dir),
-    {Args, Analysis};
-analyze_result({pz, Dir}, Args, Analysis) ->
-    true = code:add_pathz(Dir),
-    {Args, Analysis}.
+    {Args, Analysis#analysis{no_spec = Value}}.
 
 %%--------------------------------------------------------------------
 %% File processing.

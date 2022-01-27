@@ -4,10 +4,21 @@
 -behaviour(ct_suite).
 
 -export([all/0]).
--export([empty/1, bad_plt/1, single_file/1, annotate/1, annotate_in_place/1]).
+-export([empty/1, bad_plt/1, single_file/1, annotate/1, annotate_in_place/1, trusted/1,
+         show_succ/1, files/1, def/1, no_spec/1, ann_erl/1]).
 
 all() ->
-    [empty, bad_plt, single_file, annotate, annotate_in_place].
+    [empty,
+     bad_plt,
+     single_file,
+     annotate,
+     annotate_in_place,
+     trusted,
+     show_succ,
+     files,
+     def,
+     no_spec,
+     ann_erl].
 
 empty(_) ->
     ct:comment("With no files... we get an error"),
@@ -42,6 +53,13 @@ single_file(_) ->
      {info, <<"%% ----", _/binary>>},
      {info, <<"-spec exported() -> 'ok'.">>}] =
         run_typer(#{files_r => [abs_test_path("single_file")], mode => show_exported}),
+
+    ct:comment("With edoc... we get its types as edoc"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"%% @spec exported() -> 'ok'.">>},
+     {info, <<"%% @spec not_exported() -> 'ok'.">>}] =
+        run_typer(#{files_r => [abs_test_path("single_file")], edoc => true}),
     {comment, ""}.
 
 %% @todo Test annotate_inc_files when https://github.com/erlang/otp/issues/5653 is fixed.
@@ -64,6 +82,101 @@ annotate_in_place(_) ->
     %% by running it a second time
     {ok, FileInfo1} = test_annotate_mode(annotate_in_place),
     false = FileInfo0 == FileInfo1,
+    {comment, ""}.
+
+%% @todo Improve the test when https://github.com/erlang/otp/issues/5657 is fixed.
+trusted(_) ->
+    ct:comment("With an invalid path.. we get an error"),
+    [{abort, <<"typer: cannot access ", _/binary>>}] =
+        run_typer(#{files_r => [abs_test_path("trusted")],
+                    trusted => [abs_test_path("trusted/non-existent.erl")]}),
+
+    ct:comment("No specs in the trusted file"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"\n%% File", _/binary>>},
+     {info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec trusted() -> 'trusted'.">>},
+     {info, <<"-spec untrusted() -> 'trusted'.">>}] =
+        lists:sort(run_typer(#{files_r => [abs_test_path("trusted")],
+                               trusted => [abs_test_path("trusted/empty.erl")]})),
+    {comment, ""}.
+
+files(_) ->
+    ct:comment("3 files on files_r"),
+    [_, _, _] =
+        [F
+         || {info, <<"\n%% File", F/binary>>}
+                <- run_typer(#{files_r => [abs_test_path("trusted")]})],
+
+    ct:comment("2 files on files"),
+    [_, _] =
+        [F
+         || {info, <<"\n%% File", F/binary>>}
+                <- run_typer(#{files =>
+                                   [abs_test_path("trusted/empty.erl"),
+                                    abs_test_path("trusted/trusted.erl")]})],
+
+    ct:comment("3 files when combined"),
+    [_, _, _] =
+        [F
+         || {info, <<"\n%% File", F/binary>>}
+                <- run_typer(#{files_r => [abs_test_path("trusted")],
+                               files =>
+                                   [abs_test_path("trusted/empty.erl"),
+                                    abs_test_path("trusted/trusted.erl")]})],
+    {comment, ""}.
+
+show_succ(_) ->
+    ct:comment("Show original contract if false"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec spec() -> boolean().">>}] =
+        run_typer(#{files_r => [abs_test_path("show_succ")], show_succ => false}),
+
+    ct:comment("Show success typing if true"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec spec() -> 'false'.">>}] =
+        run_typer(#{files_r => [abs_test_path("show_succ")], show_succ => true}),
+    {comment, ""}.
+
+def(_) ->
+    ct:comment("Without a macro definition.. we get an error"),
+    [{abort, <<"typer: Analysis failed with error report:", _/binary>>}] =
+        run_typer(#{files_r => [abs_test_path("def")]}),
+
+    ct:comment("With a single module... we get its types"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec def() -> 'd1'.">>}] =
+        run_typer(#{files_r => [abs_test_path("def")], macros => [{'DEF', d1}]}),
+    {comment, ""}.
+
+no_spec(_) ->
+    ct:comment("Show original spec if false"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec specced() -> x:y().">>}] =
+        run_typer(#{files_r => [abs_test_path("no_spec")], no_spec => false}),
+
+    ct:comment("Disregards existing spec if true"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec specced() -> 'true'.">>}] =
+        run_typer(#{files_r => [abs_test_path("no_spec")], no_spec => true}),
+    {comment, ""}.
+
+ann_erl(_) ->
+    ct:comment(".ann.erl files are ignored"),
+    [{abort, <<"typer: no file(s) to analyze">>}] =
+        run_typer(#{files_r => [abs_test_path("ann_erl")]}),
+
+    ct:comment(".ann.erl files are ignored even when explicitely required"),
+    [{abort, <<"typer: no file(s) to analyze">>}] =
+        run_typer(#{files => [abs_test_path("ann_erl/ignore.ann.erl")]}),
     {comment, ""}.
 
 %%% PRIVATE FUNCTIONS
