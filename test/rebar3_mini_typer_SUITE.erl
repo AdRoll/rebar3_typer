@@ -5,10 +5,10 @@
 
 -export([all/0]).
 -export([empty/1, bad_plt/1, single_file/1, annotate/1, trusted/1, show_succ/1, files/1,
-         def/1]).
+         def/1, no_spec/1]).
 
 all() ->
-    [empty, bad_plt, single_file, annotate, trusted, show_succ, files, def].
+    [empty, bad_plt, single_file, annotate, trusted, show_succ, files, def, no_spec].
 
 empty(_) ->
     ct:comment("With no files... we get an error"),
@@ -137,6 +137,20 @@ def(_) ->
      {info, <<"%% ----", _/binary>>},
      {info, <<"-spec def() -> 'd1'.">>}] =
         run_typer(#{files_r => [abs_test_path("def")], macros => [{'DEF', d1}]}),
+    {comment, ""}.
+
+no_spec(_) ->
+    ct:comment("Show original spec if false"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec specced() -> x:y().">>}] =
+        run_typer(#{files_r => [abs_test_path("no_spec")], no_spec => false}),
+
+    ct:comment("Disregards existing spec if true"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec specced() -> 'true'.">>}] =
+        run_typer(#{files_r => [abs_test_path("no_spec")], no_spec => true}),
     {comment, ""}.
 
 %%% PRIVATE FUNCTIONS
