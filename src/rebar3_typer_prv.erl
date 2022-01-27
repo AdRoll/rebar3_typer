@@ -185,7 +185,7 @@ dirs_from_app_discovery(State) ->
 -spec dir_for_app(rebar_app_info:t()) -> file:filename_all() | [].
 dir_for_app(AppInfo) ->
     Dir = rebar_app_info:dir(AppInfo),
-    filename:join(Dir, "src").
+    rebar_dir:make_relative_path(filename:join(Dir, "src"), rebar_dir:get_cwd()).
 
 %% @todo consider adding shorthand versions to some (or all) options,
 %%       even if it doesn't exist on TypEr itself
