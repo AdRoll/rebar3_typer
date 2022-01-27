@@ -69,15 +69,15 @@ trusted(_) ->
 
     ct:comment("No specs in the trusted file"),
     [{info, <<"\n%% File", _/binary>>},
+     {info, <<"\n%% File", _/binary>>},
+     {info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
      {info, <<"%% ----", _/binary>>},
      {info, <<"-spec trusted() -> 'trusted'.">>},
-     {info, <<"\n%% File", _/binary>>},
-     {info, <<"%% ----", _/binary>>},
-     {info, <<"-spec untrusted() -> 'trusted'.">>},
-     {info, <<"\n%% File", _/binary>>},
-     {info, <<"%% ----", _/binary>>}] =
-        run_typer(#{files_r => [abs_test_path("trusted")],
-                    trusted => [abs_test_path("trusted/empty.erl")]}),
+     {info, <<"-spec untrusted() -> 'trusted'.">>}] =
+        lists:sort(run_typer(#{files_r => [abs_test_path("trusted")],
+                               trusted => [abs_test_path("trusted/empty.erl")]})),
     {comment, ""}.
 
 show_succ(_) ->
