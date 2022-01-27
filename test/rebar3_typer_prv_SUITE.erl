@@ -109,7 +109,8 @@ files(_Config) ->
     {files_r, []} = lists:keyfind(files_r, 1, get_opts(State1)),
 
     ct:comment("--files takes precedence over rebar.config"),
-    State2 = rebar_state:command_parsed_args(State1, {[{files, "files/single_file/single.erl"}], []}),
+    State2 =
+        rebar_state:command_parsed_args(State1, {[{files, "files/single_file/single.erl"}], []}),
     {files, ["files/single_file/single.erl"]} = lists:keyfind(files, 1, get_opts(State2)),
 
     ct:comment("--files prevents default files_r"),
