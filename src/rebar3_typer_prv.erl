@@ -131,12 +131,31 @@ default_mode_show(Opts) ->
 default_plt(#{plt := _Anything} = Opts, _State) ->
     Opts;
 default_plt(#{} = Opts, State) ->
-    %% rebar3 writes the PLT from running dialyzer with the tool to this path,
-    %% so there's a high chance we will find a PLT in there
-    PltFile =
-        filename:join([rebar_dir:base_dir(State),
-                       ["rebar3", "_", rebar_utils:otp_release(), "_plt"]]),
-    Opts#{plt => PltFile}.
+    Opts#{plt => get_plt(State)}.
+
+-spec get_plt(rebar_state:t()) -> file:filename_all().
+get_plt(State) ->
+    %% Dialyzer lets a directory and a prefix be specified in rebar.config
+    %% So, check for those, and otherwise use the default:
+    %% base_dir/rebar3_{otp_version}_plt
+    DialyzerConfig = rebar_state:get(State, dialyzer, []),
+    Dir = case proplists:get_value(plt_location, DialyzerConfig, undefined) of
+              local ->
+                  rebar_dir:base_dir(State);
+              undefined ->
+                  rebar_dir:base_dir(State);
+              Location ->
+                  Location
+          end,
+    Prefix =
+        case proplists:get_value(plt_prefix, DialyzerConfig, undefined) of
+            undefined ->
+                "rebar3";
+            Pre ->
+                Pre
+        end,
+    Filename = Prefix ++ "_" ++ rebar_utils:otp_release() ++ "_plt",
+    filename:join(Dir, Filename).
 
 -spec default_src_dirs(rebar3_mini_typer:opts(), rebar_state:t()) ->
                           rebar3_mini_typer:opts().
