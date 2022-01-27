@@ -3,8 +3,6 @@
 
 -export([init/1, do/1, format_error/1]).
 
--define(PRV_ERROR(Reason), {error, {?MODULE, Reason}}).
-
 -ignore_xref([do/1,
               format_error/1,
               {providers, create, 1},
@@ -44,10 +42,10 @@ do(State) ->
         ok = rebar3_mini_typer:run(Opts),
         {ok, State}
     catch
-        error:({unrecognized_opt, _Opt} = Error) ->
-            ?PRV_ERROR(Error);
-        error:({colliding_modes, _NewMode, _OldMode} = Error) ->
-            ?PRV_ERROR(Error)
+        error:{unrecognized_opt, Opt} ->
+            {error, {?MODULE, {unrecognized_opt, Opt}}};
+        error:{colliding_modes, NewMode, OldMode} ->
+            {error, {?MODULE, {colliding_modes, NewMode, OldMode}}}
     end.
 
 -spec format_error(any()) -> iolist().
