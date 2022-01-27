@@ -4,10 +4,10 @@
 -behaviour(ct_suite).
 
 -export([all/0]).
--export([empty/1, bad_plt/1, single_file/1, annotate/1]).
+-export([empty/1, bad_plt/1, single_file/1, annotate/1, trusted/1]).
 
 all() ->
-    [empty, bad_plt, single_file, annotate].
+    [empty, bad_plt, single_file, annotate, trusted].
 
 empty(_) ->
     ct:comment("With no files... we get an error"),
@@ -58,6 +58,21 @@ annotate(_) ->
     [<<"exported() -> {'not_exported','included'}.">>,
      <<"not_exported() -> 'not_exported'.">>] =
         [Spec || <<"-spec ", Spec/binary>> <- binary:split(Text, <<"\n">>, [global, trim])],
+    {comment, ""}.
+
+%% @todo Re-enable the test when https://github.com/erlang/otp/issues/5657 is fixed.
+trusted(_) ->
+    ct:comment("With an invalid path.. we get an error"),
+    [{abort, <<"typer: cannot access ", _/binary>>}] =
+        run_typer(#{files_r => [abs_test_path("trusted")],
+                    trusted => [abs_test_path("trusted/non-existent.erl")]}),
+
+    % ct:comment("No specs for the trusted file"),
+    % [{info, <<"\n%% File", _/binary>>},
+    %  {info, <<"%% ----", _/binary>>},
+    %  {info, <<"-spec untrusted() -> 'untrusted'.">>}] =
+    %     run_typer(#{files_r => [abs_test_path("trusted")],
+    %                 trusted => [abs_test_path("trusted/trusted.erl")]}),
     {comment, ""}.
 
 %%% PRIVATE FUNCTIONS
