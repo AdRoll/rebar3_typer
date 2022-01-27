@@ -4,10 +4,10 @@
 -behaviour(ct_suite).
 
 -export([all/0]).
--export([empty/1, bad_plt/1, single_file/1, annotate/1]).
+-export([empty/1, bad_plt/1, single_file/1, annotate/1, annotate_in_place/1]).
 
 all() ->
-    [empty, bad_plt, single_file, annotate].
+    [empty, bad_plt, single_file, annotate, annotate_in_place].
 
 empty(_) ->
     ct:comment("With no files... we get an error"),
@@ -48,19 +48,44 @@ single_file(_) ->
 annotate(_) ->
     _ = file:del_dir_r(abs_test_path("annotate/typer_ann")),
     ct:comment("With mode:annotate... only erl files are annotated"),
-    [{info, <<"      Processing file: ", _/binary>>},
-     {info, <<"             Saved as: \"", PathAndQuote1/binary>>}] =
-        run_typer(#{files_r => [abs_test_path("annotate")], mode => annotate}),
-    [$\" | ReversedPath1] = lists:reverse(binary_to_list(PathAndQuote1)),
-    {ok, Text} =
-        file:read_file(
-            lists:reverse(ReversedPath1)),
-    [<<"exported() -> {'not_exported','included'}.">>,
-     <<"not_exported() -> 'not_exported'.">>] =
-        [Spec || <<"-spec ", Spec/binary>> <- binary:split(Text, <<"\n">>, [global, trim])],
+    {ok, FileInfo0} = test_annotate_mode(annotate),
+    ct:comment("Even if run twice on a row"),
+    %% ensure TypEr deleted and re-wrote the files with the same contents
+    %% by running it a second time
+    {ok, FileInfo1} = test_annotate_mode(annotate),
+    false = FileInfo0 == FileInfo1,
+    {comment, ""}.
+
+annotate_in_place(_) ->
+    ct:comment("With mode:annotate_in_place... only erl files are directly annotated"),
+    {ok, FileInfo0} = test_annotate_mode(annotate_in_place),
+    ct:comment("Even if run twice on a row"),
+    %% ensure TypEr deleted and re-wrote the files with the same contents
+    %% by running it a second time
+    {ok, FileInfo1} = test_annotate_mode(annotate_in_place),
+    false = FileInfo0 == FileInfo1,
     {comment, ""}.
 
 %%% PRIVATE FUNCTIONS
+
+test_annotate_mode(Mode) ->
+    [{info, <<"      Processing file: ", _/binary>>},
+     {info, <<"             Saved as: \"", PathAndQuote1/binary>>}] =
+        run_typer(#{files_r => [abs_test_path(atom_to_list(Mode))], mode => Mode}),
+    [$\" | ReversedPath1] = lists:reverse(binary_to_list(PathAndQuote1)),
+    Path1 = lists:reverse(ReversedPath1),
+    {ok, Text} = file:read_file(Path1),
+    [<<"exported() -> {'not_exported','included'}.">>,
+     <<"not_exported() -> 'not_exported'.">>] =
+        [Spec || <<"-spec ", Spec/binary>> <- binary:split(Text, <<"\n">>, [global, trim])],
+    _ = case Mode of
+            annotate ->
+                ".ann.erl" = string:find(Path1, ".ann.erl", trailing);
+            annotate_in_place ->
+                nomatch = string:find(Path1, ".ann.erl", trailing),
+                ".erl" = string:find(Path1, ".erl", trailing)
+        end,
+    file:read_file_info(Path1).
 
 run_typer(Opts) ->
     DefaultOpts =
