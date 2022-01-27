@@ -60,19 +60,24 @@ annotate(_) ->
         [Spec || <<"-spec ", Spec/binary>> <- binary:split(Text, <<"\n">>, [global, trim])],
     {comment, ""}.
 
-%% @todo Re-enable the test when https://github.com/erlang/otp/issues/5657 is fixed.
+%% @todo Improve the test when https://github.com/erlang/otp/issues/5657 is fixed.
 trusted(_) ->
     ct:comment("With an invalid path.. we get an error"),
     [{abort, <<"typer: cannot access ", _/binary>>}] =
         run_typer(#{files_r => [abs_test_path("trusted")],
                     trusted => [abs_test_path("trusted/non-existent.erl")]}),
 
-    % ct:comment("No specs for the trusted file"),
-    % [{info, <<"\n%% File", _/binary>>},
-    %  {info, <<"%% ----", _/binary>>},
-    %  {info, <<"-spec untrusted() -> 'untrusted'.">>}] =
-    %     run_typer(#{files_r => [abs_test_path("trusted")],
-    %                 trusted => [abs_test_path("trusted/trusted.erl")]}),
+    ct:comment("No specs in the trusted file"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec trusted() -> 'trusted'.">>},
+     {info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec untrusted() -> 'trusted'.">>},
+     {info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>}] =
+        run_typer(#{files_r => [abs_test_path("trusted")],
+                    trusted => [abs_test_path("trusted/empty.erl")]}),
     {comment, ""}.
 
 %%% PRIVATE FUNCTIONS
