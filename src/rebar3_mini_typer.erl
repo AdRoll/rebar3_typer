@@ -30,6 +30,7 @@
       plt => file:filename(),
       trusted => [file:filename()],
       files_r => [file:filename_all()],
+      macros => [{atom(), term()}],
       io => io()}.
 
 -export_type([opts/0]).
@@ -633,9 +634,8 @@ analyze_result({io, Val}, Args, Analysis) ->
     {Args, Analysis#analysis{io = Val}};
 analyze_result({mode, Mode}, Args, Analysis) ->
     {Args, Analysis#analysis{mode = Mode}};
-analyze_result({def, Val}, Args, Analysis) ->
-    NewVal = Analysis#analysis.macros ++ [Val],
-    {Args, Analysis#analysis{macros = NewVal}};
+analyze_result({macros, Macros}, Args, Analysis) ->
+    {Args, Analysis#analysis{macros = Macros}};
 analyze_result({inc, Val}, Args, Analysis) ->
     NewVal = Analysis#analysis.includes ++ [Val],
     {Args, Analysis#analysis{includes = NewVal}};

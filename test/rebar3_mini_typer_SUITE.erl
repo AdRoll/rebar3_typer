@@ -4,10 +4,11 @@
 -behaviour(ct_suite).
 
 -export([all/0]).
--export([empty/1, bad_plt/1, single_file/1, annotate/1, trusted/1, show_succ/1, files/1]).
+-export([empty/1, bad_plt/1, single_file/1, annotate/1, trusted/1, show_succ/1, files/1,
+         def/1]).
 
 all() ->
-    [empty, bad_plt, single_file, annotate, trusted, show_succ, files].
+    [empty, bad_plt, single_file, annotate, trusted, show_succ, files, def].
 
 empty(_) ->
     ct:comment("With no files... we get an error"),
@@ -124,6 +125,18 @@ show_succ(_) ->
      {info, <<"%% ----", _/binary>>},
      {info, <<"-spec spec() -> 'false'.">>}] =
         run_typer(#{files_r => [abs_test_path("show_succ")], show_succ => true}),
+    {comment, ""}.
+
+def(_) ->
+    ct:comment("Without a macro definition.. we get an error"),
+    [{abort, <<"typer: Analysis failed with error report:", _/binary>>}] =
+        run_typer(#{files_r => [abs_test_path("def")]}),
+
+    ct:comment("With a single module... we get its types"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec def() -> 'd1'.">>}] =
+        run_typer(#{files_r => [abs_test_path("def")], macros => [{'DEF', d1}]}),
     {comment, ""}.
 
 %%% PRIVATE FUNCTIONS
