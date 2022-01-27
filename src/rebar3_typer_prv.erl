@@ -19,7 +19,7 @@ init(State) ->
         providers:create([{name, typer},
                           {module, ?MODULE},
                           {bare, true}, % The task can be run by the user, always true
-                          {deps, []},
+                          {deps, [app_discovery]},
                           {example, "rebar3 typer"},
                           {opts, opts()},
                           {short_desc, "Execute TypEr on your code"},
@@ -33,12 +33,7 @@ do(State) ->
         CmdLineOpts = parse_opts(State),
         RebarConfigOpts = parse_rebar_config(State),
         Merged = maps:merge(RebarConfigOpts, CmdLineOpts),
-        RebarIo =
-            #{debug => fun rebar_api:debug/2,
-              info => fun rebar_api:info/2,
-              warn => fun rebar_api:warn/2,
-              abort => fun rebar_api:abort/2},
-        Opts = ensure_defaults(Merged#{io => RebarIo}, State),
+        Opts = ensure_defaults(Merged, State),
         ok = rebar3_mini_typer:run(Opts),
         {ok, State}
     catch
@@ -87,8 +82,6 @@ parse_cli_opts([{no_spec, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{no_spec => Bool});
 parse_cli_opts([{edoc, Bool} | T], Acc) ->
     parse_cli_opts(T, Acc#{edoc => Bool});
-parse_cli_opts([{plt, undefined} | T], Acc) ->
-    parse_cli_opts(T, Acc);
 parse_cli_opts([{plt, PltFile} | T], Acc) ->
     parse_cli_opts(T, Acc#{plt => PltFile});
 parse_cli_opts([{typespec_files, Files} | T], Acc) ->
@@ -110,26 +103,89 @@ set_mode(Key, true, Acc) ->
 split_string(String) ->
     rebar_string:lexemes(String, [$,]).
 
-%% Make sure mode is set to show, if it wasn't passed on CLI
-%% or in the config file
+%% Setting default values _after_ the CLI and config file settings
+%% have been merged, because if we set it in the CLI defaults,
+%% the config file can't override them. We need to only set them
+%% if they're not set in either place.
 -spec ensure_defaults(map(), rebar_state:t()) -> rebar3_mini_typer:opts().
-ensure_defaults(#{mode := _Anything, plt := _PltFile} = Opts, _State) ->
-    Opts;
-ensure_defaults(#{plt := _PltFile} = Opts, _State) ->
-    Opts#{mode => show};
-ensure_defaults(#{mode := _Anything} = Opts, State) ->
-    PltFile = get_plt(State),
-    Opts#{plt => PltFile};
 ensure_defaults(Opts, State) ->
-    PltFile = get_plt(State),
-    Opts#{mode => show, plt => PltFile}.
+    default_plt(default_src_dirs(default_io(default_mode_show(Opts)), State), State).
+
+-spec default_io(rebar3_mini_typer:opts()) -> rebar3_mini_typer:opts().
+default_io(Opts) ->
+    Opts#{io =>
+              #{debug => fun rebar_api:debug/2,
+                info => fun rebar_api:info/2,
+                warn => fun rebar_api:warn/2,
+                abort => fun rebar_api:abort/2}}.
+
+-spec default_mode_show(map()) -> rebar3_mini_typer:opts().
+default_mode_show(#{mode := _Anything} = Opts) ->
+    Opts;
+default_mode_show(Opts) ->
+    Opts#{mode => show}.
+
+-spec default_plt(map(), rebar_state:t()) -> rebar3_mini_typer:opts().
+default_plt(#{plt := _Anything} = Opts, _State) ->
+    Opts;
+default_plt(#{} = Opts, State) ->
+    Opts#{plt => get_plt(State)}.
 
 -spec get_plt(rebar_state:t()) -> file:filename_all().
 get_plt(State) ->
-    %% rebar3 writes the PLT from running dialyzer with the tool to this path,
-    %% so there's a high chance we will find a PLT in there
-    filename:join([rebar_dir:base_dir(State),
-                   ["rebar3", "_", rebar_utils:otp_release(), "_plt"]]).
+    %% Dialyzer lets a directory and a prefix be specified in rebar.config
+    %% So, check for those, and otherwise use the default:
+    %% base_dir/rebar3_{otp_version}_plt
+    DialyzerConfig = rebar_state:get(State, dialyzer, []),
+    Dir = case proplists:get_value(plt_location, DialyzerConfig, undefined) of
+              local ->
+                  rebar_dir:base_dir(State);
+              undefined ->
+                  rebar_dir:base_dir(State);
+              Location ->
+                  Location
+          end,
+    Prefix =
+        case proplists:get_value(plt_prefix, DialyzerConfig, undefined) of
+            undefined ->
+                "rebar3";
+            Pre ->
+                Pre
+        end,
+    Filename = Prefix ++ "_" ++ rebar_utils:otp_release() ++ "_plt",
+    filename:join(Dir, Filename).
+
+-spec default_src_dirs(rebar3_mini_typer:opts(), rebar_state:t()) ->
+                          rebar3_mini_typer:opts().
+default_src_dirs(#{files_r := _Anything} = Opts, _State) ->
+    Opts;
+default_src_dirs(#{} = Opts, State) ->
+    case dirs_from_app_discovery(State) of
+        [] ->
+            Opts#{files_r => infer_src_dirs(State)};
+        Dirs ->
+            Opts#{files_r => Dirs}
+    end.
+
+infer_src_dirs(State) ->
+    SrcDirs = rebar_state:get(State, src_dirs, []),
+    Extra = rebar_state:get(State, extra_src_dirs, []),
+    SubDirs = rebar_state:get(State, sub_dirs, []),
+    FromState = SrcDirs ++ Extra ++ SubDirs,
+    case FromState of
+        [] -> % last ditch
+            filelib:wildcard("src") ++ filelib:wildcard("{lib,apps}/*/src");
+        Dirs ->
+            Dirs
+    end.
+
+dirs_from_app_discovery(State) ->
+    [dir_for_app(AppInfo) || AppInfo <- rebar_state:project_apps(State)].
+
+-spec dir_for_app(rebar_app_info:t()) -> file:filename_all() | [].
+dir_for_app(AppInfo) ->
+    Dir = rebar_app_info:dir(AppInfo),
+    filename:join(Dir, "src").
 
 %% @todo consider adding shorthand versions to some (or all) options,
 %%       even if it doesn't exist on TypEr itself

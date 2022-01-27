@@ -43,7 +43,12 @@ no_options(_Config) ->
             rebar_state:new()),
 
     ct:comment("Simply running typer without any parameter should use only default values"),
-    [{mode, show}, {plt, _}] = get_opts(State),
+    RebarIo =
+        #{abort => fun rebar_api:abort/2,
+          debug => fun rebar_api:debug/2,
+          info => fun rebar_api:info/2,
+          warn => fun rebar_api:warn/2},
+    [{files_r, []}, {io, RebarIo}, {mode, show}, {plt, _}] = get_opts(State),
 
     {comment, ""}.
 
@@ -61,6 +66,32 @@ recursive(_Config) ->
     ct:comment("--recursive takes precedence"),
     State2 = rebar_state:command_parsed_args(State1, {[{recursive, "lib/,src/"}], []}),
     {files_r, ["lib/", "src/"]} = lists:keyfind(files_r, 1, get_opts(State2)),
+
+    ct:comment("finds dirs from sub_dirs in rebar.config"),
+    State3 = rebar_state:set(State, sub_dirs, ["foo"]),
+    {files_r, ["foo"]} = lists:keyfind(files_r, 1, get_opts(State3)),
+
+    ct:comment("finds dirs from extra_src_dirs in rebar.config"),
+    State4 = rebar_state:set(State, extra_src_dirs, ["bar"]),
+    {files_r, ["bar"]} = lists:keyfind(files_r, 1, get_opts(State4)),
+
+    ct:comment("finds dirs from src_dirs in rebar.config"),
+    State5 = rebar_state:set(State, src_dirs, ["baz"]),
+    {files_r, ["baz"]} = lists:keyfind(files_r, 1, get_opts(State5)),
+
+    ct:comment("assumes reasonable defaults for regular apps"),
+    {files_r, [DummySrc]} = lists:keyfind(files_r, 1, get_opts_from("dummy")),
+    "crs/ymmud/" ++ _ = lists:reverse(DummySrc),
+
+    ct:comment("assumes reasonable defaults for umbrella apps"),
+    {files_r, [App1Src, App2Src]} = lists:keyfind(files_r, 1, get_opts_from("umbrella")),
+    "crs/1ppa/sppa/allerbmu/" ++ _ = lists:reverse(App1Src),
+    "crs/2ppa/sppa/allerbmu/" ++ _ = lists:reverse(App2Src),
+
+    ct:comment("assumes reasonable defaults as a last ditch"),
+    {files_r, ["lib/app1/src", "lib/app2/src"]} =
+        lists:keyfind(files_r, 1, get_opts_from("last-ditch")),
+
     {comment, ""}.
 
 %% @doc --show|show_exported|annotate|annotate_inc_files / mode
@@ -195,6 +226,10 @@ plt(_Config) ->
         rebar3_typer:init(
             rebar_state:new()),
 
+    ct:comment("default plt is used if unconfigured"),
+    Expected = "_build/default/rebar3_" ++ rebar_utils:otp_release() ++ "_plt",
+    {plt, Expected} = lists:keyfind(plt, 1, get_opts(State)),
+
     ct:comment("plt is correctly picked up from rebar.config"),
     State1 = rebar_state:set(State, typer, [{plt, "1.plt"}]),
     {plt, "1.plt"} = lists:keyfind(plt, 1, get_opts(State1)),
@@ -202,6 +237,17 @@ plt(_Config) ->
     ct:comment("--plt takes precedence"),
     State2 = rebar_state:command_parsed_args(State1, {[{plt, "2.plt"}], []}),
     {plt, "2.plt"} = lists:keyfind(plt, 1, get_opts(State2)),
+
+    ct:comment("plt from Dialyzer config is used"),
+    State3 =
+        rebar_state:set(State, dialyzer, [{plt_location, "dialyzer"}, {plt_prefix, "app"}]),
+    Expected3 = "dialyzer/app_" ++ rebar_utils:otp_release() ++ "_plt",
+    {plt, Expected3} = lists:keyfind(plt, 1, get_opts(State3)),
+
+    ct:comment("plt from Dialyzer config is used with local keyword"),
+    State4 = rebar_state:set(State, dialyzer, [{plt_location, local}, {plt_prefix, "app"}]),
+    Expected4 = "_build/default/app_" ++ rebar_utils:otp_release() ++ "_plt",
+    {plt, Expected4} = lists:keyfind(plt, 1, get_opts(State4)),
     {comment, ""}.
 
 %% @doc --typespec_files / typespec_files
@@ -245,16 +291,10 @@ format_error(_Config) ->
 
 get_opts(State) ->
     {ok, _} = rebar3_typer_prv:do(State),
-    DefaultIo =
-        #{abort => fun rebar_api:abort/2,
-          debug => fun rebar_api:debug/2,
-          info => fun rebar_api:info/2,
-          warn => fun rebar_api:warn/2},
     receive
-        #{opts := #{io := DefaultIo} = Opts} ->
+        #{opts := Opts} ->
             lists:sort(
-                maps:to_list(
-                    maps:remove(io, Opts)))
+                maps:to_list(Opts))
     after 500 ->
         {error, timeout}
     end.
@@ -268,4 +308,21 @@ get_error(State) ->
     catch
         error:Error ->
             Error
+    end.
+
+get_opts_from(Folder) ->
+    {ok, Cwd} = file:get_cwd(),
+    try
+        ok =
+            file:set_cwd(
+                filename:join([code:lib_dir(rebar3_typer), "test", "files", Folder])),
+        {ok, RebarConfig} = file:consult("rebar.config"),
+        {ok, State0} =
+            rebar_prv_app_discovery:init(
+                rebar_state:new(RebarConfig)),
+        {ok, State1} = rebar_prv_app_discovery:do(State0),
+        {ok, State2} = rebar3_typer:init(State1),
+        get_opts(State2)
+    after
+        file:set_cwd(Cwd)
     end.
