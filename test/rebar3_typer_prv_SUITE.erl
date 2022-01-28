@@ -23,8 +23,8 @@ all() ->
 
 init_per_testcase(_, Config) ->
     Self = self(),
-    meck:new(rebar3_mini_typer),
-    meck:expect(rebar3_mini_typer,
+    meck:new(typer_core),
+    meck:expect(typer_core,
                 run,
                 fun(Opts) ->
                    Self ! #{opts => Opts},
@@ -33,7 +33,7 @@ init_per_testcase(_, Config) ->
     Config.
 
 end_per_testcase(_, Config) ->
-    meck:unload(rebar3_mini_typer),
+    meck:unload(typer_core),
     Config.
 
 %% @doc Just try to run typer without options
