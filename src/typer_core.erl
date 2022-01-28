@@ -35,7 +35,7 @@
       includes => [file:filename_all()],
       io => io()}.
 
--export_type([modes/0, opts/0]).
+-export_type([mode/0, opts/0]).
 
 -record(analysis,
         {mode :: mode() | undefined,
