@@ -12,7 +12,7 @@
 %% =============================================================================
 %% Public API
 %% =============================================================================
-
+%% @doc Set up the plugin.
 -spec init(rebar_state:t()) -> {ok, rebar_state:t()}.
 init(State) ->
     Provider =
@@ -26,6 +26,7 @@ init(State) ->
                           {desc, "Execute TypEr on your code"}]),
     {ok, rebar_state:add_provider(State, Provider)}.
 
+%% @doc Run the plugin.
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, {rebar3_typer_prv, term()}}.
 do(State) ->
     try
@@ -43,6 +44,7 @@ do(State) ->
             {error, {?MODULE, {colliding_modes, NewMode, OldMode}}}
     end.
 
+%% @doc Turn errors into strings.
 -spec format_error(any()) -> iolist().
 format_error(not_implemented) ->
     io_lib:format("Not yet implemented.", []);

@@ -8,7 +8,7 @@
 %% =============================================================================
 %% Public API
 %% =============================================================================
-
+%% @doc Main entry point for the plugin
 -spec init(rebar_state:t()) -> {ok, rebar_state:t()}.
 init(State) ->
     {ok, State1} = rebar3_typer_prv:init(State),
