@@ -358,10 +358,10 @@ check_imported_functions({File, {Line, F, A}}, Inc, Types, Analysis) ->
                                 IncMap#{File => Elem}
                         end,
                     Inc#inc{map = NewMap}
-            end
+            end;
         _ -> %% File is not added. Add it
             NewMap = IncMap#{File => [{FA, {Line, Type}}]},
-            Inc#inc{map = NewMap};
+            Inc#inc{map = NewMap}
     end.
 
 inc_warning({F, A}, File, Analysis) ->
@@ -602,16 +602,16 @@ show_type_info(File, Info, Analysis) ->
 
 get_type_info(Func, Types, Analysis) ->
     case Types of
-        #{Func := {contract, _Fun} = C }->
+        #{Func := {contract, _Fun} = C} ->
             C;
-        #{Func := {_RetType, _ArgType} = RA }->
-            RA
+        #{Func := {_RetType, _ArgType} = RA} ->
+            RA;
         _ ->
             %% Note: Typeinfo of any function should exist in
             %% the result offered by dialyzer, otherwise there
             %% *must* be something wrong with the analysis
             Msg = io_lib:format("No type info for function: ~tp\n", [Func]),
-            fatal_error(Msg, Analysis);
+            fatal_error(Msg, Analysis)
     end.
 
 %%--------------------------------------------------------------------
