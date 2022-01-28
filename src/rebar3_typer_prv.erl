@@ -188,7 +188,18 @@ infer_src_dirs(State) ->
     end.
 
 dirs_from_app_discovery(State) ->
-    [dir_for_app(AppInfo) || AppInfo <- rebar_state:project_apps(State)].
+    ProjectSrcDirs = [dir_for_app(AppInfo) || AppInfo <- rebar_state:project_apps(State)],
+    Profiles =
+        lists:reverse(
+            rebar_state:current_profiles(State)),
+    EbinDirs =
+        [rebar_app_info:ebin_dir(AppInfo)
+         || Profile <- Profiles,
+            AppInfo
+                <- rebar_state:get(State, {parsed_deps, Profile}, [])
+                   ++ rebar_state:project_apps(State)],
+    code:add_pathsa(EbinDirs),
+    ProjectSrcDirs.
 
 -spec dir_for_app(rebar_app_info:t()) -> file:filename_all() | [].
 dir_for_app(AppInfo) ->
