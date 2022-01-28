@@ -51,10 +51,10 @@
          %% Files in 'fms' are compilable with option 'to_pp'; we keep them
          %% as {FileName, ModuleName} in case the ModuleName is different
          fms = [] :: [{file:filename(), module()}],
-         ex_func = map_new() :: map(),
-         record = map_new() :: map(),
-         func = map_new() :: map(),
-         inc_func = map_new() :: map(),
+         ex_func = maps:new() :: map(),
+         record = maps:new() :: map(),
+         func = maps:new() :: map(),
+         inc_func = maps:new() :: map(),
          trust_plt = dialyzer_plt:new() :: dialyzer_plt:plt(),
          io = default_io() :: io()}).
 
@@ -215,15 +215,14 @@ get_external(Exts, Plt) ->
 -define(TYPER_ANN_DIR, "typer_ann").
 
 -type line() :: non_neg_integer().
--type fa() :: {atom(), arity()}.
 -type func_info() :: {line(), atom(), arity()}.
 
 -record(info,
         {records = maps:new() :: erl_types:type_table(),
          functions = [] :: [func_info()],
-         types = map_new() :: map(),
+         types = maps:new() :: map(),
          edoc = false :: boolean()}).
--record(inc, {map = map_new() :: map(), filter = [] :: [file:filename()]}).
+-record(inc, {map = maps:new() :: map(), filter = [] :: [file:filename()]}).
 
 -type inc() :: #inc{}.
 
@@ -257,13 +256,13 @@ write_and_collect_inc_info(Analysis) ->
 
 write_inc_files(Inc, Analysis) ->
     Fun = fun(File) ->
-             Val = map_lookup(File, Inc#inc.map),
+             Val = maps:get(File, Inc#inc.map, none),
              %% Val is function with its type info
              %% in form [{{Line,F,A},Type}]
              Functions = [Key || {Key, _} <- Val],
              Val1 = [{{F, A}, Type} || {{_Line, F, A}, Type} <- Val],
              Info =
-                 #info{types = map_from_list(Val1),
+                 #info{types = maps:from_list(Val1),
                        records = maps:new(),
                        %% Note we need to sort functions here!
                        functions = lists:keysort(1, Functions)},
@@ -338,17 +337,17 @@ check_imported_functions({File, {Line, F, A}}, Inc, Types, Analysis) ->
     IncMap = Inc#inc.map,
     FA = {F, A},
     Type = get_type_info(FA, Types, Analysis),
-    case map_lookup(File, IncMap) of
+    case maps:get(File, IncMap, none) of
         none -> %% File is not added. Add it
-            Obj = {File, [{FA, {Line, Type}}]},
-            NewMap = map_insert(Obj, IncMap),
+            {Key, Value} = {File, [{FA, {Line, Type}}]},
+            NewMap = maps:put(Key, Value, IncMap),
             Inc#inc{map = NewMap};
         Val -> %% File is already in. Check.
             case lists:keyfind(FA, 1, Val) of
                 false ->
                     %% Function is not in; add it
-                    Obj = {File, Val ++ [{FA, {Line, Type}}]},
-                    NewMap = map_insert(Obj, IncMap),
+                    {Key, Value} = {File, Val ++ [{FA, {Line, Type}}]},
+                    NewMap = maps:put(Key, Value, IncMap),
                     Inc#inc{map = NewMap};
                 Type ->
                     %% Function is in and with same type
@@ -360,9 +359,9 @@ check_imported_functions({File, {Line, F, A}}, Inc, Types, Analysis) ->
                     NewMap =
                         case Elem of
                             [] ->
-                                map_remove(File, IncMap);
+                                maps:remove(File, IncMap);
                             _ ->
-                                map_insert({File, Elem}, IncMap)
+                                maps:put(File, Elem, IncMap)
                         end,
                     Inc#inc{map = NewMap}
             end
@@ -380,18 +379,18 @@ clean_inc(Inc) ->
     normalize_obj(Inc1).
 
 remove_yecc_generated_file(#inc{filter = Filter} = Inc) ->
-    Fun = fun(Key, #inc{map = Map} = I) -> I#inc{map = map_remove(Key, Map)} end,
+    Fun = fun(Key, #inc{map = Map} = I) -> I#inc{map = maps:remove(Key, Map)} end,
     lists:foldl(Fun, Inc, Filter).
 
 normalize_obj(TmpInc) ->
     Fun = fun(Key, Val, Inc) ->
              NewVal = [{{Line, F, A}, Type} || {{F, A}, {Line, Type}} <- Val],
-             map_insert({Key, NewVal}, Inc)
+             maps:put(Key, NewVal, Inc)
           end,
-    TmpInc#inc{map = map_fold(Fun, map_new(), TmpInc#inc.map)}.
+    TmpInc#inc{map = maps:fold(Fun, maps:new(), TmpInc#inc.map)}.
 
 get_records(File, Analysis) ->
-    map_lookup(File, Analysis#analysis.record).
+    maps:get(File, Analysis#analysis.record, none).
 
 get_types(Module, Analysis, Records) ->
     TypeInfoPlt = Analysis#analysis.trust_plt,
@@ -410,7 +409,7 @@ get_types(Module, Analysis, Records) ->
             false ->
                 [get_type(I, CodeServer, Records, Analysis) || I <- TypeInfo]
         end,
-    map_from_list(TypeInfoList).
+    maps:from_list(TypeInfoList).
 
 convert_type_info({{_M, F, A}, Range, Arg}) ->
     {{F, A}, {Range, Arg}}.
@@ -449,17 +448,17 @@ get_type({{M, F, A} = MFA, Range, Arg}, CodeServer, Records, Analysis) ->
 get_functions(File, Analysis) ->
     case Analysis#analysis.mode of
         show ->
-            Funcs = map_lookup(File, Analysis#analysis.func),
-            IncFuncs = map_lookup(File, Analysis#analysis.inc_func),
+            Funcs = maps:get(File, Analysis#analysis.func, none),
+            IncFuncs = maps:get(File, Analysis#analysis.inc_func, none),
             remove_module_info(Funcs) ++ normalize_inc_funcs(IncFuncs);
         show_exported ->
-            ExFuncs = map_lookup(File, Analysis#analysis.ex_func),
+            ExFuncs = maps:get(File, Analysis#analysis.ex_func, none),
             remove_module_info(ExFuncs);
         Mode when Mode =:= annotate orelse Mode =:= annotate_in_place ->
-            Funcs = map_lookup(File, Analysis#analysis.func),
+            Funcs = maps:get(File, Analysis#analysis.func, none),
             remove_module_info(Funcs);
         annotate_inc_files ->
-            map_lookup(File, Analysis#analysis.inc_func)
+            maps:get(File, Analysis#analysis.inc_func, none)
     end.
 
 normalize_inc_funcs(Functions) ->
@@ -605,7 +604,7 @@ show_type_info(File, Info, Analysis) ->
     lists:foreach(Fun, Info#info.functions).
 
 get_type_info(Func, Types, Analysis) ->
-    case map_lookup(Func, Types) of
+    case maps:get(Func, Types, none) of
         none ->
             %% Note: Typeinfo of any function should exist in
             %% the result offered by dialyzer, otherwise there
@@ -897,15 +896,15 @@ analyze_core_tree(Core, Records, SpecInfo, CbInfo, ExpTypes, Analysis, File) ->
     Fun = fun analyze_one_function/2,
     AllDefs = cerl:module_defs(Tree),
     Acc = lists:foldl(Fun, #tmpAcc{file = File, module = Module}, AllDefs),
-    ExportedFuncMap = map_insert({File, ExFuncs}, Analysis#analysis.ex_func),
+    ExportedFuncMap = maps:put(File, ExFuncs, Analysis#analysis.ex_func),
     %% we must sort all functions in the file which
     %% originate from this file by *numerical order* of lineNo
     SortedFunctions = lists:keysort(1, Acc#tmpAcc.funcAcc),
-    FuncMap = map_insert({File, SortedFunctions}, Analysis#analysis.func),
+    FuncMap = maps:put(File, SortedFunctions, Analysis#analysis.func),
     %% we do not need to sort functions which are imported from included files
-    IncFuncMap = map_insert({File, Acc#tmpAcc.incFuncAcc}, Analysis#analysis.inc_func),
+    IncFuncMap = maps:put(File, Acc#tmpAcc.incFuncAcc, Analysis#analysis.inc_func),
     FMs = Analysis#analysis.fms ++ [{File, Module}],
-    RecordMap = map_insert({File, Records}, Analysis#analysis.record),
+    RecordMap = maps:put(File, Records, Analysis#analysis.record),
     Analysis#analysis{fms = FMs,
                       callgraph = CG,
                       codeserver = CS6,
@@ -1041,41 +1040,3 @@ rcv_ext_types(Self, ExtTypes) ->
         {Self, done} ->
             lists:usort(ExtTypes)
     end.
-
-%%--------------------------------------------------------------------
-%% A convenient abstraction of a Key-Value mapping data structure
-%% specialized for the uses in this module
-%%--------------------------------------------------------------------
-
--spec map_new() -> #{}.
-map_new() ->
-    maps:new().
-
--spec map_insert({term(), term()}, map()) -> map().
-map_insert(Object, Map) ->
-    {Key, Value} = Object,
-    maps:put(Key, Value, Map).
-
--spec map_lookup(term(), map()) -> term().
-map_lookup(Key, Map) ->
-    try
-        maps:get(Key, Map)
-    catch
-        error:_ ->
-            none
-    end.
-
--spec map_from_list([{fa(), term()}]) -> map().
-map_from_list(List) ->
-    maps:from_list(List).
-
--spec map_remove(term(), map()) -> map().
-map_remove(Key, Map) ->
-    maps:remove(Key, Map).
-
--spec map_fold(fun((term(), term(), term()) -> map()),
-                    map(),
-                    map()) ->
-                       map().
-map_fold(Fun, Acc0, Map) ->
-    maps:fold(Fun, Acc0, Map).
