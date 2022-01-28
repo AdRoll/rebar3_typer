@@ -337,18 +337,12 @@ check_imported_functions({File, {Line, F, A}}, Inc, Types, Analysis) ->
     IncMap = Inc#inc.map,
     FA = {F, A},
     Type = get_type_info(FA, Types, Analysis),
-    case maps:get(File, IncMap, none) of
-        none -> %% File is not added. Add it
-            {Key, Value} = {File, [{FA, {Line, Type}}]},
-            NewMap = maps:put(Key, Value, IncMap),
-            Inc#inc{map = NewMap};
-        Val -> %% File is already in. Check.
+    case IncMap of
+        #{File := Val} -> %% File is already in. Check.
             case lists:keyfind(FA, 1, Val) of
                 false ->
                     %% Function is not in; add it
-                    {Key, Value} = {File, Val ++ [{FA, {Line, Type}}]},
-                    NewMap = maps:put(Key, Value, IncMap),
-                    Inc#inc{map = NewMap};
+                    Inc#inc{map = IncMap#{File => Val ++ [{FA, {Line, Type}}]}};
                 Type ->
                     %% Function is in and with same type
                     Inc;
@@ -361,10 +355,13 @@ check_imported_functions({File, {Line, F, A}}, Inc, Types, Analysis) ->
                             [] ->
                                 maps:remove(File, IncMap);
                             _ ->
-                                maps:put(File, Elem, IncMap)
+                                IncMap#{File => Elem}
                         end,
                     Inc#inc{map = NewMap}
             end
+        _ -> %% File is not added. Add it
+            NewMap = IncMap#{File => [{FA, {Line, Type}}]},
+            Inc#inc{map = NewMap};
     end.
 
 inc_warning({F, A}, File, Analysis) ->
@@ -385,7 +382,7 @@ remove_yecc_generated_file(#inc{filter = Filter} = Inc) ->
 normalize_obj(TmpInc) ->
     Fun = fun(Key, Val, Inc) ->
              NewVal = [{{Line, F, A}, Type} || {{F, A}, {Line, Type}} <- Val],
-             maps:put(Key, NewVal, Inc)
+             Inc#{Key => NewVal}
           end,
     TmpInc#inc{map = maps:fold(Fun, maps:new(), TmpInc#inc.map)}.
 
@@ -604,17 +601,17 @@ show_type_info(File, Info, Analysis) ->
     lists:foreach(Fun, Info#info.functions).
 
 get_type_info(Func, Types, Analysis) ->
-    case maps:get(Func, Types, none) of
-        none ->
+    case Types of
+        #{Func := {contract, _Fun} = C }->
+            C;
+        #{Func := {_RetType, _ArgType} = RA }->
+            RA
+        _ ->
             %% Note: Typeinfo of any function should exist in
             %% the result offered by dialyzer, otherwise there
             %% *must* be something wrong with the analysis
             Msg = io_lib:format("No type info for function: ~tp\n", [Func]),
             fatal_error(Msg, Analysis);
-        {contract, _Fun} = C ->
-            C;
-        {_RetType, _ArgType} = RA ->
-            RA
     end.
 
 %%--------------------------------------------------------------------
