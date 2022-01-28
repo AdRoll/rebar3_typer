@@ -11,6 +11,7 @@
 all() ->
     [no_options,
      recursive,
+     files,
      good_modes,
      colliding_modes,
      show_success_typings,
@@ -104,7 +105,7 @@ files(_Config) ->
     {files, Files} = lists:keyfind(files, 1, get_opts(State1)),
 
     ct:comment("files prevents default files_r"),
-    {files_r, []} = lists:keyfind(files_r, 1, get_opts(State1)),
+    false = lists:keyfind(files_r, 1, get_opts(State1)),
 
     ct:comment("--files takes precedence over rebar.config"),
     State2 =
@@ -112,7 +113,7 @@ files(_Config) ->
     {files, ["files/single_file/single.erl"]} = lists:keyfind(files, 1, get_opts(State2)),
 
     ct:comment("--files prevents default files_r"),
-    {files_r, []} = lists:keyfind(files_r, 1, get_opts(State2)),
+    false = lists:keyfind(files_r, 1, get_opts(State2)),
 
     {comment, ""}.
 
