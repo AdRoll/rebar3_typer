@@ -96,9 +96,13 @@ recursive(_Config) ->
 
 %% @doc Proper include folder discovery
 includes(_Config) ->
-    {ok, _State} =
-        rebar3_typer:init(
-            rebar_state:new()),
+    ct:comment("Regular include folder and erl_opts are correctly picked up"),
+    {includes, Paths} = lists:keyfind(includes, 1, get_opts_from("dummy")),
+    ["ymmud/selif/" ++ _,
+     "edulcni/ymmud/selif/" ++ _,
+     "edulcni_rehto/ymmud/selif/" ++ _,
+     "crs/ymmud/selif/" ++ _] =
+        [lists:reverse(Path) || Path <- lists:sort(Paths)],
 
     {comment, ""}.
 
