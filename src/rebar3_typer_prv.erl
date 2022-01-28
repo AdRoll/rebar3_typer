@@ -185,9 +185,10 @@ infer_src_dirs(State) ->
     end.
 
 dirs_from_app_discovery(State) ->
-    {SrcDirs, ProjectIncludeDirs} =
+    {SrcDirs, ProjectIncludeDirs0} =
         lists:unzip([{dir_for_app(AppInfo), include_dirs(AppInfo)}
                      || AppInfo <- rebar_state:project_apps(State)]),
+    ProjectIncludeDirs = lists:append(ProjectIncludeDirs0),
     Profiles =
         lists:reverse(
             rebar_state:current_profiles(State)),
@@ -195,9 +196,7 @@ dirs_from_app_discovery(State) ->
         lists:append([include_dirs(Dep)
                       || Profile <- Profiles,
                          Dep <- rebar_state:get(State, {parsed_deps, Profile}, [])]),
-    IncludeDirs =
-        lists:map(fun(Path) -> rebar_dir:make_relative_path(Path, rebar_dir:get_cwd()) end,
-                  lists:append(DepIncludeDirs ++ ProjectIncludeDirs)),
+    IncludeDirs = DepIncludeDirs ++ ProjectIncludeDirs,
     {SrcDirs, IncludeDirs}.
 
 %% straight ot ouf rebar_compiler_erl
