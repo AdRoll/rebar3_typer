@@ -497,13 +497,13 @@ write_typed_file(File, Info, #analysis{mode = Mode} = Analysis) ->
                             delete_file(NewFileName, Analysis),
                             write_typed_file(File, Info, NewFileName, Analysis);
                         enospc ->
-                            Msg = io_lib:format("Not enough space in ~tp\n", [Dir]),
+                            Msg = io_lib:format("Not enough space in ~tp", [Dir]),
                             fatal_error(Msg, Analysis);
                         eacces ->
-                            Msg = io_lib:format("No write permission in ~tp\n", [Dir]),
+                            Msg = io_lib:format("No write permission in ~tp", [Dir]),
                             fatal_error(Msg, Analysis);
                         _ ->
-                            Msg = io_lib:format("Unhandled error ~ts when writing ~tp\n",
+                            Msg = io_lib:format("Unhandled error ~ts when writing ~tp",
                                                 [Reason, Dir]),
                             fatal_error(Msg, Analysis)
                     end;
@@ -520,7 +520,7 @@ delete_file(File, Analysis) ->
         {error, enoent} ->
             ok;
         {error, _} ->
-            Msg = io_lib:format("Error in deleting file ~ts\n", [File]),
+            Msg = io_lib:format("Error in deleting file ~ts", [File]),
             fatal_error(Msg, Analysis)
     end.
 
@@ -610,7 +610,7 @@ get_type_info(Func, Types, Analysis) ->
             %% Note: Typeinfo of any function should exist in
             %% the result offered by dialyzer, otherwise there
             %% *must* be something wrong with the analysis
-            Msg = io_lib:format("No type info for function: ~tp\n", [Func]),
+            Msg = io_lib:format("No type info for function: ~tp", [Func]),
             fatal_error(Msg, Analysis);
         {contract, _Fun} = C ->
             C;
