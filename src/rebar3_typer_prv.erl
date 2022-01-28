@@ -34,7 +34,7 @@ do(State) ->
         RebarConfigOpts = parse_rebar_config(State),
         Merged = maps:merge(RebarConfigOpts, CmdLineOpts),
         Opts = ensure_defaults(Merged, State),
-        ok = rebar3_mini_typer:run(Opts),
+        ok = typer_core:run(Opts),
         {ok, State}
     catch
         error:{unrecognized_opt, Opt} ->
@@ -109,12 +109,12 @@ split_string(String) ->
 %% have been merged, because if we set it in the CLI defaults,
 %% the config file can't override them. We need to only set them
 %% if they're not set in either place.
--spec ensure_defaults(map(), rebar_state:t()) -> rebar3_mini_typer:opts().
+-spec ensure_defaults(map(), rebar_state:t()) -> typer_core:opts().
 ensure_defaults(Opts, State) ->
     default_plt(default_src_and_include_dirs(default_io(default_mode_show(Opts)), State),
                 State).
 
--spec default_io(rebar3_mini_typer:opts()) -> rebar3_mini_typer:opts().
+-spec default_io(typer_core:opts()) -> typer_core:opts().
 default_io(Opts) ->
     Opts#{io =>
               #{debug => fun rebar_api:debug/2,
@@ -122,13 +122,13 @@ default_io(Opts) ->
                 warn => fun rebar_api:warn/2,
                 abort => fun rebar_api:abort/2}}.
 
--spec default_mode_show(map()) -> rebar3_mini_typer:opts().
+-spec default_mode_show(map()) -> typer_core:opts().
 default_mode_show(#{mode := _Anything} = Opts) ->
     Opts;
 default_mode_show(Opts) ->
     Opts#{mode => show}.
 
--spec default_plt(map(), rebar_state:t()) -> rebar3_mini_typer:opts().
+-spec default_plt(map(), rebar_state:t()) -> typer_core:opts().
 default_plt(#{plt := _Anything} = Opts, _State) ->
     Opts;
 default_plt(#{} = Opts, State) ->
@@ -158,8 +158,8 @@ get_plt(State) ->
     Filename = Prefix ++ "_" ++ rebar_utils:otp_release() ++ "_plt",
     filename:join(Dir, Filename).
 
--spec default_src_and_include_dirs(rebar3_mini_typer:opts(), rebar_state:t()) ->
-                                      rebar3_mini_typer:opts().
+-spec default_src_and_include_dirs(typer_core:opts(), rebar_state:t()) ->
+                                      typer_core:opts().
 default_src_and_include_dirs(#{files_r := _Anything} = Opts, _State) ->
     Opts;
 default_src_and_include_dirs(#{files := _Anything} = Opts, _State) ->
