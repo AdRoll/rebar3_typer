@@ -48,7 +48,7 @@ no_options(_Config) ->
           debug => fun rebar_api:debug/2,
           info => fun rebar_api:info/2,
           warn => fun rebar_api:warn/2},
-    [{files_r, []}, {io, RebarIo}, {mode, show}, {plt, _}] = get_opts(State),
+    [{files_r, []}, {includes, []}, {io, RebarIo}, {mode, show}, {plt, _}] = get_opts(State),
 
     {comment, ""}.
 
