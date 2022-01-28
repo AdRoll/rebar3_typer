@@ -95,6 +95,7 @@ recursive(_Config) ->
     {comment, ""}.
 
 %% @doc Proper include folder discovery
+%% @todo Add tests for includes in rebar deps
 includes(_Config) ->
     ct:comment("Regular include folder and erl_opts are correctly picked up"),
     {includes, Paths} = lists:keyfind(includes, 1, get_opts_from("dummy")),
@@ -103,6 +104,14 @@ includes(_Config) ->
      "edulcni_rehto/ymmud/selif/" ++ _,
      "crs/ymmud/selif/" ++ _] =
         [lists:reverse(Path) || Path <- lists:sort(Paths)],
+
+    ct:comment("Includes in subdirs are correctly picked up"),
+    {includes, SubPaths} = lists:keyfind(includes, 1, get_opts_from("subs")),
+    ["sbus/selif/" ++ _,
+     "edulcni/sbus/selif/" ++ _,
+     "crs/sbus/selif/" ++ _,
+     "edulcni/crs/sbus/selif/" ++ _] =
+        [lists:reverse(Path) || Path <- lists:sort(SubPaths)],
 
     {comment, ""}.
 
