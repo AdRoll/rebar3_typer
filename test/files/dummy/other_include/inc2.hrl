@@ -1,0 +1,2 @@
+-hank ignore.
+-define(MORE, [more, things]).

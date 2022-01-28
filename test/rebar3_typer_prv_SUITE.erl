@@ -113,6 +113,16 @@ includes(_Config) ->
      "edulcni/crs/sbus/selif/" ++ _] =
         [lists:reverse(Path) || Path <- lists:sort(SubPaths)],
 
+    ct:comment("Includes in umbrella projects are correctly picked up"),
+    {includes, UmbPaths} = lists:keyfind(includes, 1, get_opts_from("umbrella")),
+    ["1ppa/sppa/allerbmu/selif/" ++ _,
+     "edulcni/1ppa/sppa/allerbmu/selif/" ++ _,
+     "crs/1ppa/sppa/allerbmu/selif/" ++ _,
+     "2ppa/sppa/allerbmu/selif/" ++ _,
+     "edulcni/2ppa/sppa/allerbmu/selif/" ++ _,
+     "crs/2ppa/sppa/allerbmu/selif/" ++ _] =
+        [lists:reverse(Path) || Path <- lists:sort(UmbPaths)],
+
     {comment, ""}.
 
 %% @doc --files / files

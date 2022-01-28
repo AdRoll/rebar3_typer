@@ -1,0 +1,1 @@
+{application, subs, [{vsn, "0"}]}.
