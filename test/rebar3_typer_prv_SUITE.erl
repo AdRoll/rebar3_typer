@@ -4,13 +4,15 @@
 -behaviour(ct_suite).
 
 -export([all/0, init_per_testcase/2, end_per_testcase/2]).
--export([no_options/1, recursive/1, files/1, good_modes/1, colliding_modes/1,
+-export([no_options/1, recursive/1, includes/1, files/1, good_modes/1, colliding_modes/1,
          show_success_typings/1, no_spec/1, edoc/1, plt/1, typespec_files/1, unrecognized_opt/1,
          format_error/1]).
 
 all() ->
     [no_options,
      recursive,
+     includes,
+     files,
      good_modes,
      colliding_modes,
      show_success_typings,
@@ -92,6 +94,37 @@ recursive(_Config) ->
 
     {comment, ""}.
 
+%% @doc Proper include folder discovery
+%% @todo Add tests for includes in rebar deps
+includes(_Config) ->
+    ct:comment("Regular include folder and erl_opts are correctly picked up"),
+    {includes, Paths} = lists:keyfind(includes, 1, get_opts_from("dummy")),
+    ["ymmud/selif/" ++ _,
+     "edulcni/ymmud/selif/" ++ _,
+     "edulcni_rehto/ymmud/selif/" ++ _,
+     "crs/ymmud/selif/" ++ _] =
+        [lists:reverse(Path) || Path <- lists:sort(Paths)],
+
+    ct:comment("Includes in subdirs are correctly picked up"),
+    {includes, SubPaths} = lists:keyfind(includes, 1, get_opts_from("subs")),
+    ["sbus/selif/" ++ _,
+     "edulcni/sbus/selif/" ++ _,
+     "crs/sbus/selif/" ++ _,
+     "edulcni/crs/sbus/selif/" ++ _] =
+        [lists:reverse(Path) || Path <- lists:sort(SubPaths)],
+
+    ct:comment("Includes in umbrella projects are correctly picked up"),
+    {includes, UmbPaths} = lists:keyfind(includes, 1, get_opts_from("umbrella")),
+    ["1ppa/sppa/allerbmu/selif/" ++ _,
+     "edulcni/1ppa/sppa/allerbmu/selif/" ++ _,
+     "crs/1ppa/sppa/allerbmu/selif/" ++ _,
+     "2ppa/sppa/allerbmu/selif/" ++ _,
+     "edulcni/2ppa/sppa/allerbmu/selif/" ++ _,
+     "crs/2ppa/sppa/allerbmu/selif/" ++ _] =
+        [lists:reverse(Path) || Path <- lists:sort(UmbPaths)],
+
+    {comment, ""}.
+
 %% @doc --files / files
 files(_Config) ->
     {ok, State} =
@@ -104,7 +137,7 @@ files(_Config) ->
     {files, Files} = lists:keyfind(files, 1, get_opts(State1)),
 
     ct:comment("files prevents default files_r"),
-    {files_r, []} = lists:keyfind(files_r, 1, get_opts(State1)),
+    false = lists:keyfind(files_r, 1, get_opts(State1)),
 
     ct:comment("--files takes precedence over rebar.config"),
     State2 =
@@ -112,7 +145,7 @@ files(_Config) ->
     {files, ["files/single_file/single.erl"]} = lists:keyfind(files, 1, get_opts(State2)),
 
     ct:comment("--files prevents default files_r"),
-    {files_r, []} = lists:keyfind(files_r, 1, get_opts(State2)),
+    false = lists:keyfind(files_r, 1, get_opts(State2)),
 
     {comment, ""}.
 

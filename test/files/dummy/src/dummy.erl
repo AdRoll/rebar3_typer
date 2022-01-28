@@ -1,6 +1,9 @@
 -module(dummy).
 
--compile([export_all, nowarn_export_all]).
+-include("inc.hrl").
+-include("inc2.hrl").
 
-a(L) ->
-    L ++ [1, 2, 3].
+-export([a/0]).
+
+a() ->
+    ?FRUITS ++ ?MORE.
