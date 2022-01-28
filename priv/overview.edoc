@@ -2,7 +2,7 @@
 
 @author Brujo <brujo.benavides@nextroll.com>
 @author Pablo <pablo.costassanchez@nextroll.com>
-@author Mackenzie <mackenzie.morgan@nextroll.coop>
+@author Mackenzie <mackenzie.morgan@nextroll.com>
 @title Rebar3 Typer: Use TypEr directly from rebar3
 @doc This project provides a rebar3 plugin that's a wrapper around TypEr so you can use the <code>rebar3 typer</code> as a command.
      You can use it to annotate your functions with specs and types.
