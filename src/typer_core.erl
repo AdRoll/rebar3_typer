@@ -3,7 +3,7 @@
 %%%      annotate the code of files with such type information.
 %%%      This module is basically a carbon-copy of Erlang/OTP's typer,
 %%%      but built in a way that it can be executed not as a script.
--module(rebar3_mini_typer).
+-module(typer_core).
 
 -hank([{unnecessary_function_arguments, [swallow_output]}]).
 

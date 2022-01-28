@@ -1,5 +1,5 @@
-%%% @doc Test module for rebar3_mini_typer
--module(rebar3_mini_typer_SUITE).
+%%% @doc Test module for typer_core
+-module(typer_core_SUITE).
 
 -behaviour(ct_suite).
 
@@ -205,7 +205,7 @@ run_typer(Opts) ->
         #{plt => default_plt(),
           mode => show,
           io => default_io()},
-    try rebar3_mini_typer:run(
+    try typer_core:run(
             maps:merge(DefaultOpts, Opts))
     of
         ok ->
