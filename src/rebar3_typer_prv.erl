@@ -111,7 +111,9 @@ split_string(String) ->
 %% if they're not set in either place.
 -spec ensure_defaults(map(), rebar_state:t()) -> typer_core:opts().
 ensure_defaults(Opts, State) ->
-    default_plt(default_src_and_include_dirs(default_io(default_mode_show(Opts)), State),
+    default_plt(default_include_dirs(default_src_dirs(default_io(default_mode_show(Opts)),
+                                                      State),
+                                     State),
                 State).
 
 -spec default_io(typer_core:opts()) -> typer_core:opts().
@@ -158,18 +160,17 @@ get_plt(State) ->
     Filename = Prefix ++ "_" ++ rebar_utils:otp_release() ++ "_plt",
     filename:join(Dir, Filename).
 
--spec default_src_and_include_dirs(typer_core:opts(), rebar_state:t()) ->
-                                      typer_core:opts().
-default_src_and_include_dirs(#{files_r := _Anything} = Opts, _State) ->
+-spec default_src_dirs(typer_core:opts(), rebar_state:t()) -> typer_core:opts().
+default_src_dirs(#{files_r := _Anything} = Opts, _State) ->
     Opts;
-default_src_and_include_dirs(#{files := _Anything} = Opts, _State) ->
+default_src_dirs(#{files := _Anything} = Opts, _State) ->
     Opts;
-default_src_and_include_dirs(#{} = Opts, State) ->
+default_src_dirs(#{} = Opts, State) ->
     case dirs_from_app_discovery(State) of
-        {[], IncludeDirs} ->
-            Opts#{files_r => infer_src_dirs(State), includes => IncludeDirs};
-        {SrcDirs, IncludeDirs} ->
-            Opts#{files_r => SrcDirs, includes => IncludeDirs}
+        [] ->
+            Opts#{files_r => infer_src_dirs(State)};
+        Dirs ->
+            Opts#{files_r => Dirs}
     end.
 
 infer_src_dirs(State) ->
@@ -185,19 +186,35 @@ infer_src_dirs(State) ->
     end.
 
 dirs_from_app_discovery(State) ->
-    {SrcDirs, ProjectIncludeDirs0} =
-        lists:unzip([{dir_for_app(AppInfo), include_dirs(AppInfo)}
-                     || AppInfo <- rebar_state:project_apps(State)]),
-    ProjectIncludeDirs = lists:append(ProjectIncludeDirs0),
+    [dir_for_app(AppInfo) || AppInfo <- rebar_state:project_apps(State)].
+
+-spec dir_for_app(rebar_app_info:t()) -> file:filename_all() | [].
+dir_for_app(AppInfo) ->
+    Dir = rebar_app_info:dir(AppInfo),
+    rebar_dir:make_relative_path(
+        filename:join(Dir, "src"), rebar_dir:get_cwd()).
+
+default_include_dirs(Opts, State) ->
+    case include_dirs_from_app_discovery(State) of
+        [] ->
+            Opts;
+        IncludeDirs ->
+            Opts#{includes => IncludeDirs}
+    end.
+
+include_dirs_from_app_discovery(State) ->
+    ProjectIncludeDirs =
+        [IncludeDir
+         || AppInfo <- rebar_state:project_apps(State), IncludeDir <- include_dirs(AppInfo)],
     Profiles =
         lists:reverse(
             rebar_state:current_profiles(State)),
     DepIncludeDirs =
-        lists:append([include_dirs(Dep)
-                      || Profile <- Profiles,
-                         Dep <- rebar_state:get(State, {parsed_deps, Profile}, [])]),
-    IncludeDirs = DepIncludeDirs ++ ProjectIncludeDirs,
-    {SrcDirs, IncludeDirs}.
+        [IncludeDir
+         || Profile <- Profiles,
+            Dep <- rebar_state:get(State, {parsed_deps, Profile}, []),
+            IncludeDir <- include_dirs(Dep)],
+    DepIncludeDirs ++ ProjectIncludeDirs.
 
 %% straight ot ouf rebar_compiler_erl
 include_dirs(AppInfo) ->
@@ -205,14 +222,15 @@ include_dirs(AppInfo) ->
     RebarOpts = rebar_app_info:opts(AppInfo),
     ErlOpts = rebar_opts:erl_opts(RebarOpts),
     ErlOptIncludes = proplists:get_all_values(i, ErlOpts),
-    _AbsIncl =
-        [filename:join(OutDir, "include") % standard include path
-         %% includes specified by erl_opts
-         | lists:map(fun(Incl) -> filename:absname(Incl) end, ErlOptIncludes)]
-        ++ lists:append([find_recursive_incl(OutDir, Src, RebarOpts)
-                         || Src <- rebar_dir:all_src_dirs(RebarOpts, ["src"], [])])
-        ++ %% top-level dir for legacy stuff
-           [OutDir].
+    % standard include path
+    % ++ includes from erl_opts
+    % ++ dep includes
+    % ++ top-level dir for legacy stuff
+    [filename:join(OutDir, "include") | lists:map(fun(Incl) -> filename:absname(Incl) end,
+                                                  ErlOptIncludes)]
+    ++ lists:append([find_recursive_incl(OutDir, Src, RebarOpts)
+                     || Src <- rebar_dir:all_src_dirs(RebarOpts, ["src"], [])])
+    ++ [OutDir].
 
 find_recursive_incl(Base, Src, Opts) ->
     find_recursive_incl(Base, Src, Opts, rebar_dir:recursive(Opts, Src)).
@@ -225,18 +243,12 @@ find_recursive_incl(Base, Src, Opts, true) ->
         {error, _} ->
             [Dir];
         {ok, Files} ->
-            [Dir]
-            ++ lists:append([find_recursive_incl(Dir, File, Opts)
-                             || File <- Files,
-                                filelib:is_dir(
-                                    filename:join(Dir, File))])
+            [Dir | [SubDir
+                    || File <- Files,
+                       filelib:is_dir(
+                           filename:join(Dir, File)),
+                       SubDir <- find_recursive_incl(Dir, File, Opts)]]
     end.
-
--spec dir_for_app(rebar_app_info:t()) -> file:filename_all() | [].
-dir_for_app(AppInfo) ->
-    Dir = rebar_app_info:dir(AppInfo),
-    rebar_dir:make_relative_path(
-        filename:join(Dir, "src"), rebar_dir:get_cwd()).
 
 %% @todo consider adding shorthand versions to some (or all) options,
 %%       even if it doesn't exist on TypEr itself

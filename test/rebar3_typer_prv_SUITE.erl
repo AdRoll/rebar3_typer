@@ -4,13 +4,14 @@
 -behaviour(ct_suite).
 
 -export([all/0, init_per_testcase/2, end_per_testcase/2]).
--export([no_options/1, recursive/1, files/1, good_modes/1, colliding_modes/1,
+-export([no_options/1, recursive/1, includes/1, files/1, good_modes/1, colliding_modes/1,
          show_success_typings/1, no_spec/1, edoc/1, plt/1, typespec_files/1, unrecognized_opt/1,
          format_error/1]).
 
 all() ->
     [no_options,
      recursive,
+     includes,
      files,
      good_modes,
      colliding_modes,
@@ -49,7 +50,7 @@ no_options(_Config) ->
           debug => fun rebar_api:debug/2,
           info => fun rebar_api:info/2,
           warn => fun rebar_api:warn/2},
-    [{files_r, []}, {includes, []}, {io, RebarIo}, {mode, show}, {plt, _}] = get_opts(State),
+    [{files_r, []}, {io, RebarIo}, {mode, show}, {plt, _}] = get_opts(State),
 
     {comment, ""}.
 
@@ -90,6 +91,14 @@ recursive(_Config) ->
     ct:comment("assumes reasonable defaults as a last ditch"),
     {files_r, ["lib/app1/src", "lib/app2/src"]} =
         lists:keyfind(files_r, 1, get_opts_from("last-ditch")),
+
+    {comment, ""}.
+
+%% @doc Proper include folder discovery
+includes(_Config) ->
+    {ok, _State} =
+        rebar3_typer:init(
+            rebar_state:new()),
 
     {comment, ""}.
 
