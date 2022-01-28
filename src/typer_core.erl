@@ -68,6 +68,7 @@
 
 -type args() :: #args{}.
 
+%% @doc Run TypEr with the provided options.
 -spec run(opts()) -> ok.
 run(Opts) ->
     _ = io:setopts(standard_error, [{encoding, unicode}]),

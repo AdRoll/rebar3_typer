@@ -1,0 +1,11 @@
+** this is the overview.doc file for rebar3_hank **
+
+@author Brujo <brujo.benavides@nextroll.com>
+@author Pablo <pablo.costassanchez@nextroll.com>
+@author Diego <mackenzie.morgan@nextroll.coop>
+@title Rebar3 Typer: Use TypEr directly from rebar3
+@doc This project provides a rebar3 plugin that's a wrapper around TypEr so you can use the <code>rebar3 typer</code> as a command.
+     You can use it to annotate your functions with specs and types.
+
+@reference See <a target="_blank" href="https://github.com/AdRoll/rebar3_typer">our README</a> for more information.
+@reference See <a target="_blank" href="https://www.erlang.org/doc/man/typer.html">The Erlang Docs</a> to see what TypEr is capable of.
