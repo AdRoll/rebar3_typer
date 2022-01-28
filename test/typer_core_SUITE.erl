@@ -5,7 +5,7 @@
 
 -export([all/0]).
 -export([empty/1, bad_plt/1, single_file/1, annotate/1, annotate_in_place/1, trusted/1,
-         show_succ/1, files/1, def/1, no_spec/1, ann_erl/1]).
+         show_succ/1, files/1, macros/1, includes/1, no_spec/1, ann_erl/1]).
 
 all() ->
     [empty,
@@ -16,7 +16,8 @@ all() ->
      trusted,
      show_succ,
      files,
-     def,
+     macros,
+     includes,
      no_spec,
      ann_erl].
 
@@ -143,7 +144,7 @@ show_succ(_) ->
         run_typer(#{files_r => [abs_test_path("show_succ")], show_succ => true}),
     {comment, ""}.
 
-def(_) ->
+macros(_) ->
     ct:comment("Without a macro definition.. we get an error"),
     [{abort, <<"typer: Analysis failed with error report:", _/binary>>}] =
         run_typer(#{files_r => [abs_test_path("def")]}),
@@ -153,6 +154,20 @@ def(_) ->
      {info, <<"%% ----", _/binary>>},
      {info, <<"-spec def() -> 'd1'.">>}] =
         run_typer(#{files_r => [abs_test_path("def")], macros => [{'DEF', d1}]}),
+    {comment, ""}.
+
+includes(_) ->
+    ct:comment("Without includes definition.. we get an error"),
+    [{abort, <<"typer: Analysis failed with error report:", _/binary>>}] =
+        run_typer(#{files_r => [abs_test_path("dummy/src/")]}),
+
+    ct:comment("With a single module... we get its types"),
+    [{info, <<"\n%% File", _/binary>>},
+     {info, <<"%% ----", _/binary>>},
+     {info, <<"-spec a() -> ['apples' | 'bananas' | 'more' | 'things',...].">>}] =
+        run_typer(#{files_r => [abs_test_path("dummy/src/")],
+                    includes =>
+                        [abs_test_path("dummy/include"), abs_test_path("dummy/other_include")]}),
     {comment, ""}.
 
 no_spec(_) ->
