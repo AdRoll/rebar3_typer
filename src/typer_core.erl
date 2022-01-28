@@ -621,9 +621,6 @@ get_type_info(Func, Types, Analysis) ->
 %%--------------------------------------------------------------------
 %% Processing of command-line options and arguments.
 %%--------------------------------------------------------------------
-%% @todo cmd-line args that are not part of rebar3:
-%%          -D -I -r -pa -pz
-%% @todo construct files_r or files
 -spec process_cl_args(opts()) -> {args(), analysis()}.
 process_cl_args(Opts) ->
     analyze_args(maps:to_list(Opts), #args{}, #analysis{}).
