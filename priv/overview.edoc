@@ -1,7 +1,7 @@
 ** this is the overview.doc file for rebar3_hank **
 
 @author Brujo <brujo.benavides@nextroll.com>
-@author Pablo <pablo.costassanchez@nextroll.com>
+@author Pablo <pablo.costas@nextroll.com>
 @author Mackenzie <mackenzie.morgan@nextroll.com>
 @title Rebar3 Typer: Use TypEr directly from rebar3
 @doc This project provides a rebar3 plugin that's a wrapper around TypEr so you can use the <code>rebar3 typer</code> as a command.
