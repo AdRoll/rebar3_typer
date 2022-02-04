@@ -12,7 +12,7 @@
 %% =============================================================================
 %% Public API
 %% =============================================================================
-
+%% @doc Set up the plugin.
 -spec init(rebar_state:t()) -> {ok, rebar_state:t()}.
 init(State) ->
     Provider =
@@ -26,6 +26,7 @@ init(State) ->
                           {desc, "Execute TypEr on your code"}]),
     {ok, rebar_state:add_provider(State, Provider)}.
 
+%% @doc Run the plugin.
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, {rebar3_typer_prv, term()}}.
 do(State) ->
     try
@@ -43,6 +44,7 @@ do(State) ->
             {error, {?MODULE, {colliding_modes, NewMode, OldMode}}}
     end.
 
+%% @doc Turn errors into strings.
 -spec format_error(any()) -> iolist().
 format_error(not_implemented) ->
     io_lib:format("Not yet implemented.", []);
@@ -111,7 +113,10 @@ split_string(String) ->
 %% if they're not set in either place.
 -spec ensure_defaults(map(), rebar_state:t()) -> typer_core:opts().
 ensure_defaults(Opts, State) ->
-    default_plt(default_src_dirs(default_io(default_mode_show(Opts)), State), State).
+    default_plt(default_include_dirs(default_src_dirs(default_io(default_mode_show(Opts)),
+                                                      State),
+                                     State),
+                State).
 
 -spec default_io(typer_core:opts()) -> typer_core:opts().
 default_io(Opts) ->
@@ -183,13 +188,80 @@ infer_src_dirs(State) ->
     end.
 
 dirs_from_app_discovery(State) ->
-    [dir_for_app(AppInfo) || AppInfo <- rebar_state:project_apps(State)].
+    ProjectSrcDirs = [dir_for_app(AppInfo) || AppInfo <- rebar_state:project_apps(State)],
+    Profiles =
+        lists:reverse(
+            rebar_state:current_profiles(State)),
+    EbinDirs =
+        [rebar_app_info:ebin_dir(AppInfo)
+         || Profile <- Profiles,
+            AppInfo
+                <- rebar_state:get(State, {parsed_deps, Profile}, [])
+                   ++ rebar_state:project_apps(State)],
+    code:add_pathsa(EbinDirs),
+    ProjectSrcDirs.
 
 -spec dir_for_app(rebar_app_info:t()) -> file:filename_all() | [].
 dir_for_app(AppInfo) ->
     Dir = rebar_app_info:dir(AppInfo),
     rebar_dir:make_relative_path(
         filename:join(Dir, "src"), rebar_dir:get_cwd()).
+
+default_include_dirs(Opts, State) ->
+    case include_dirs_from_app_discovery(State) of
+        [] ->
+            Opts;
+        IncludeDirs ->
+            Opts#{includes => IncludeDirs}
+    end.
+
+include_dirs_from_app_discovery(State) ->
+    ProjectIncludeDirs =
+        [IncludeDir
+         || AppInfo <- rebar_state:project_apps(State), IncludeDir <- include_dirs(AppInfo)],
+    Profiles =
+        lists:reverse(
+            rebar_state:current_profiles(State)),
+    DepIncludeDirs =
+        [IncludeDir
+         || Profile <- Profiles,
+            Dep <- rebar_state:get(State, {parsed_deps, Profile}, []),
+            IncludeDir <- include_dirs(Dep)],
+    DepIncludeDirs ++ ProjectIncludeDirs.
+
+%% straight ot ouf rebar_compiler_erl
+include_dirs(AppInfo) ->
+    OutDir = rebar_app_info:dir(AppInfo),
+    RebarOpts = rebar_app_info:opts(AppInfo),
+    ErlOpts = rebar_opts:erl_opts(RebarOpts),
+    ErlOptIncludes = proplists:get_all_values(i, ErlOpts),
+    % standard include path
+    % ++ includes from erl_opts
+    % ++ dep includes
+    % ++ top-level dir for legacy stuff
+    [filename:join(OutDir, "include") | lists:map(fun(Incl) -> filename:absname(Incl) end,
+                                                  ErlOptIncludes)]
+    ++ lists:append([find_recursive_incl(OutDir, Src, RebarOpts)
+                     || Src <- rebar_dir:all_src_dirs(RebarOpts, ["src"], [])])
+    ++ [OutDir].
+
+find_recursive_incl(Base, Src, Opts) ->
+    find_recursive_incl(Base, Src, Opts, rebar_dir:recursive(Opts, Src)).
+
+find_recursive_incl(Base, Src, _Opts, false) ->
+    [filename:join(Base, Src)];
+find_recursive_incl(Base, Src, Opts, true) ->
+    Dir = filename:join(Base, Src),
+    case file:list_dir(Dir) of
+        {error, _} ->
+            [Dir];
+        {ok, Files} ->
+            [Dir | [SubDir
+                    || File <- Files,
+                       filelib:is_dir(
+                           filename:join(Dir, File)),
+                       SubDir <- find_recursive_incl(Dir, File, Opts)]]
+    end.
 
 %% @todo consider adding shorthand versions to some (or all) options,
 %%       even if it doesn't exist on TypEr itself

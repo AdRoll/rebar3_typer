@@ -32,9 +32,10 @@
       files => [file:filename()],
       files_r => [file:filename_all()],
       macros => [{atom(), term()}],
+      includes => [file:filename_all()],
       io => io()}.
 
--export_type([opts/0]).
+-export_type([mode/0, opts/0]).
 
 -record(analysis,
         {mode :: mode() | undefined,
@@ -67,6 +68,7 @@
 
 -type args() :: #args{}.
 
+%% @doc Run TypEr with the provided options.
 -spec run(opts()) -> ok.
 run(Opts) ->
     _ = io:setopts(standard_error, [{encoding, unicode}]),
@@ -639,16 +641,14 @@ analyze_result({trusted, Val}, Args, Analysis) ->
     {Args#args{trusted = NewVal}, Analysis};
 analyze_result({edoc, Value}, Args, Analysis) ->
     {Args, Analysis#analysis{edoc = Value}};
-%% Get useful information for actual analysis
 analyze_result({io, Val}, Args, Analysis) ->
     {Args, Analysis#analysis{io = Val}};
 analyze_result({mode, Mode}, Args, Analysis) ->
     {Args, Analysis#analysis{mode = Mode}};
 analyze_result({macros, Macros}, Args, Analysis) ->
     {Args, Analysis#analysis{macros = Macros}};
-analyze_result({inc, Val}, Args, Analysis) ->
-    NewVal = Analysis#analysis.includes ++ [Val],
-    {Args, Analysis#analysis{includes = NewVal}};
+analyze_result({includes, Includes}, Args, Analysis) ->
+    {Args, Analysis#analysis{includes = Includes}};
 analyze_result({plt, Plt}, Args, Analysis) ->
     {Args, Analysis#analysis{plt = Plt}};
 analyze_result({show_succ, Value}, Args, Analysis) ->
