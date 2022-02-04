@@ -52,10 +52,10 @@
          %% Files in 'fms' are compilable with option 'to_pp'; we keep them
          %% as {FileName, ModuleName} in case the ModuleName is different
          fms = [] :: [{file:filename(), module()}],
-         ex_func = maps:new() :: map(),
-         record = maps:new() :: map(),
-         func = maps:new() :: map(),
-         inc_func = maps:new() :: map(),
+         ex_func = maps:new() :: #{file:filename() => fun()},
+         record = maps:new() :: #{file:filename() => fun()},
+         func = maps:new() :: #{file:filename() => fun()},
+         inc_func = maps:new() :: #{file:filename() => fun()},
          trust_plt = dialyzer_plt:new() :: dialyzer_plt:plt(),
          io = default_io() :: io()}).
 
