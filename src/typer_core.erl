@@ -52,10 +52,10 @@
          %% Files in 'fms' are compilable with option 'to_pp'; we keep them
          %% as {FileName, ModuleName} in case the ModuleName is different
          fms = [] :: [{file:filename(), module()}],
-         ex_func = maps:new() :: #{file:filename() => fun()},
-         record = maps:new() :: #{file:filename() => fun()},
-         func = maps:new() :: #{file:filename() => fun()},
-         inc_func = maps:new() :: #{file:filename() => fun()},
+         ex_func = maps:new() :: #{file:filename() => [func_info()]},
+         record = maps:new() :: #{file:filename() => erl_types:type_table()},
+         func = maps:new() :: #{file:filename() => [func_info()]},
+         inc_func = maps:new() :: #{file:filename() => [inc_file_info()]},
          trust_plt = dialyzer_plt:new() :: dialyzer_plt:plt(),
          io = default_io() :: io()}).
 
@@ -218,13 +218,24 @@ get_external(Exts, Plt) ->
 
 -type line() :: non_neg_integer().
 -type func_info() :: {line(), atom(), arity()}.
+-type func_name() :: {atom(), arity()}.
+-type func_type() ::
+    {contract, dialyzer_contract()} |
+    {erl_types:erl_type(), [erl_types:erl_type()] | arity()}.
+-type func_types() :: #{func_name() => func_type()}.
+%% This is a record (#contract{}) defined in dialyzer.hrl
+%% but we can't include_lib that file since it also defines
+%% #analysis
+-type dialyzer_contract() :: tuple().
 
 -record(info,
         {records = maps:new() :: erl_types:type_table(),
          functions = [] :: [func_info()],
-         types = maps:new() :: map(),
+         types = maps:new() :: func_types(),
          edoc = false :: boolean()}).
--record(inc, {map = maps:new() :: map(), filter = [] :: [file:filename()]}).
+-record(inc,
+        {map = maps:new() :: #{file:filename() => [{func_name(), {pos_integer(), func_type()}}]},
+         filter = [] :: [file:filename()]}).
 
 -type inc() :: #inc{}.
 
@@ -250,7 +261,7 @@ write_and_collect_inc_info(Analysis) ->
     Fun = fun({File, Module}, Inc) ->
              Info = get_final_info(File, Module, Analysis),
              write_typed_file(File, Info, Analysis),
-             IncFuns = get_functions(File, Analysis),
+             IncFuns = get_inc_functions(File, Analysis),
              collect_imported_functions(IncFuns, Info#info.types, Inc, Analysis)
           end,
     NewInc = lists:foldl(Fun, #inc{}, Analysis#analysis.fms),
@@ -345,7 +356,7 @@ check_imported_functions({File, {Line, F, A}}, Inc, Types, Analysis) ->
                 false ->
                     %% Function is not in; add it
                     Inc#inc{map = IncMap#{File => Val ++ [{FA, {Line, Type}}]}};
-                Type ->
+                {FA, {_, Type}} ->
                     %% Function is in and with same type
                     Inc;
                 _ ->
@@ -457,8 +468,28 @@ get_functions(File, Analysis) ->
             Funcs = maps:get(File, Analysis#analysis.func, none),
             remove_module_info(Funcs);
         annotate_inc_files ->
+            normalize_inc_funcs(maps:get(File, Analysis#analysis.inc_func, none))
+    end.
+
+-spec get_inc_functions(file:filename(), analysis()) -> [{file:filename(), func_info()}].
+get_inc_functions(File, Analysis) ->
+    case Analysis#analysis.mode of
+        show ->
+            Funcs = maps:get(File, Analysis#analysis.func, none),
+            IncFuncs = maps:get(File, Analysis#analysis.inc_func, none),
+            extend_functions(File, remove_module_info(Funcs)) ++ IncFuncs;
+        show_exported ->
+            ExFuncs = maps:get(File, Analysis#analysis.ex_func, none),
+            extend_functions(File, remove_module_info(ExFuncs));
+        Mode when Mode =:= annotate orelse Mode =:= annotate_in_place ->
+            Funcs = maps:get(File, Analysis#analysis.func, none),
+            extend_functions(File, remove_module_info(Funcs));
+        annotate_inc_files ->
             maps:get(File, Analysis#analysis.inc_func, none)
     end.
+
+extend_functions(FileName, Functions) ->
+    [{FileName, FunInfo} || FunInfo <- Functions].
 
 normalize_inc_funcs(Functions) ->
     [FunInfo || {_FileName, FunInfo} <- Functions].
