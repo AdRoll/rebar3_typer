@@ -229,7 +229,7 @@ include_dirs_from_app_discovery(State) ->
             IncludeDir <- include_dirs(Dep)],
     DepIncludeDirs ++ ProjectIncludeDirs.
 
-%% straight ot ouf rebar_compiler_erl
+%% Straight out of rebar_compiler_erl
 include_dirs(AppInfo) ->
     OutDir = rebar_app_info:dir(AppInfo),
     RebarOpts = rebar_app_info:opts(AppInfo),
