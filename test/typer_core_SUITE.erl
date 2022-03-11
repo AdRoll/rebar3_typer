@@ -189,7 +189,7 @@ ann_erl(_) ->
     [{abort, <<"typer: no file(s) to analyze">>}] =
         run_typer(#{files_r => [abs_test_path("ann_erl")]}),
 
-    ct:comment(".ann.erl files are ignored even when explicitely required"),
+    ct:comment(".ann.erl files are ignored even when explicitly required"),
     [{abort, <<"typer: no file(s) to analyze">>}] =
         run_typer(#{files => [abs_test_path("ann_erl/ignore.ann.erl")]}),
     {comment, ""}.
