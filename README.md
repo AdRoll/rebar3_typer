@@ -48,7 +48,7 @@ Usage: rebar3 typer [-r <recursive>] [-f <files>]
   --show                  Print type specifications for all functions on
                           stdout. [default: false]
   --show-exported         Same as --show, but print specifications for
-                          exported functions only.Specs are displayed
+                          exported functions only. Specs are displayed
                           sorted alphabetically on the function's name.
                           [default: false]
   --show_exported         Same as --show-exported. [default: false]
