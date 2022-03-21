@@ -593,9 +593,19 @@ write_typed_file([Ch | Chs] = Chars, File, Info, LineNo, Acc, Analysis) ->
             end
     end.
 
-raw_write(F, A, Info, File, Content, Analysis) ->
+raw_write(F, A, Info, File, Content, #analysis{mode = Mode} = Analysis) ->
     TypeInfo = get_type_string(F, A, Info, file, Analysis),
-    ContentList = lists:reverse(Content) ++ TypeInfo ++ "\n",
+    ContentList =
+        case {TypeInfo, Mode} of
+            %% TypeInfo will be an empty string for functions that already have specs.
+            %% In this case, when annotating directly on the files (with annotate_in_place),
+            %% we don't want to add a newline character on the spec line, as presumably it should
+            %% already have one.
+            {"", annotate_in_place} ->
+                lists:reverse(Content) ++ TypeInfo;
+            _ ->
+                lists:reverse(Content) ++ TypeInfo ++ "\n"
+        end,
     ContentBin = unicode:characters_to_binary(ContentList),
     file:write_file(File, ContentBin, [append]).
 
