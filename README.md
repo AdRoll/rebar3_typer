@@ -29,7 +29,8 @@ $ rebar3 typer
 You can basically use the same command-line options as you can use with the original TypEr:
 
 ```man
-Usage: rebar3 typer [-r <recursive>] [--show [<show>]]
+Usage: rebar3 typer [-r <recursive>] [-f <files>]
+                    [--show [<show>]]
                     [--show-exported [<show_exported>]]
                     [--show_exported [<show_exported>]]
                     [--show-success-typings [<show_success_typings>]]
@@ -43,10 +44,11 @@ Usage: rebar3 typer [-r <recursive>] [--show [<show>]]
 
   -r                      Search comma-separated directories recursively
                           for .erl files below them.
+  -f                      Files to analyze.
   --show                  Print type specifications for all functions on
                           stdout. [default: false]
   --show-exported         Same as --show, but print specifications for
-                          exported functions only.Specs are displayed
+                          exported functions only. Specs are displayed
                           sorted alphabetically on the function's name.
                           [default: false]
   --show_exported         Same as --show-exported. [default: false]
@@ -89,6 +91,7 @@ You can also put those options directly in your `rebar.config` file:
      {show_success_typings, false}, %% Show the success typings inferred by Dialyzer / Typer.
      {no_spec, false},              %% Ignore existing function specs.
      {recursive, ["d1/", "d2/"]},   %% Search directories recursively for .erl files.
+     {files, ["foo.erl"]},          %% Analyze listed .erl files, non-recursively.
      {typespec_files, ["f1", "f2"]} %% The specified file(s) already contain type specifications.
     ]}
 ```
