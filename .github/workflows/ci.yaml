@@ -9,13 +9,16 @@ on:
       - created
   workflow_dispatch:
 
+env:
+  ERL_FLAGS: "-enable-feature all"
+
 jobs:
   ubuntu:
     name: "Ubuntu"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
-        otp: [23.3, 24.3]
+        otp: [23.3, 24.3, 25.2.1]
         rebar: [3.20.0]
     steps:
     - uses: actions/checkout@v2
@@ -33,7 +36,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        otp: [23.3, 24.3]
+        otp: [23.3, 24.3, 25.2.1]
         rebar: [3.20.0]
     steps:
     - uses: actions/checkout@v2

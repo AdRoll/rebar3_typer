@@ -81,7 +81,7 @@ run(Opts) ->
     AllFiles = get_all_files(Args, Analysis2),
     Analysis3 = Analysis2#analysis{files = AllFiles},
     Analysis4 = collect_info(Analysis3),
-    TypeInfo = get_type_info(Analysis4),
+    TypeInfo = get_type_info(Analysis4, Timer),
     dialyzer_timing:stop(Timer),
     show_or_annotate(TypeInfo),
     ok.
@@ -156,15 +156,21 @@ extract(#analysis{macros = Macros,
 
 %%--------------------------------------------------------------------
 
--spec get_type_info(analysis()) -> analysis().
+-spec get_type_info(analysis(), dialyzer_timing:timing_server()) -> analysis().
 get_type_info(#analysis{callgraph = CallGraph,
                         trust_plt = TrustPLT,
                         codeserver = CodeServer} =
-                  Analysis) ->
+                  Analysis,
+              TimingServer) ->
     StrippedCallGraph = remove_external(CallGraph, TrustPLT, Analysis),
     msg(debug, "Analyizing callgraph...", [], Analysis),
     try
-        NewPlt = dialyzer_succ_typings:analyze_callgraph(StrippedCallGraph, TrustPLT, CodeServer),
+        NewPlt =
+            dialyzer_succ_typings:analyze_callgraph(StrippedCallGraph,
+                                                    TrustPLT,
+                                                    CodeServer,
+                                                    TimingServer,
+                                                    []),
         Analysis#analysis{callgraph = StrippedCallGraph, trust_plt = NewPlt}
     catch
         error:What:Stacktrace ->
