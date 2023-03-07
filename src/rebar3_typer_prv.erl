@@ -91,13 +91,13 @@ parse_cli_opts([{plt, PltFile} | T], Acc) ->
 parse_cli_opts([{typespec_files, Files} | T], Acc) ->
     parse_cli_opts(T, Acc#{trusted => split_string(Files)}).
 
-set_mode(Key, false, Acc = #{mode := Key}) ->
+set_mode(Key, false, #{mode := Key} = Acc) ->
     maps:remove(mode, Acc);
-set_mode(_Key, false, Acc = #{mode := _OtherMode}) ->
+set_mode(_Key, false, #{mode := _OtherMode} = Acc) ->
     Acc;
 set_mode(_Key, false, Acc) ->
     Acc;
-set_mode(Key, true, Acc = #{mode := Key}) ->
+set_mode(Key, true, #{mode := Key} = Acc) ->
     Acc;
 set_mode(Key, true, #{mode := OtherKey}) ->
     error({colliding_modes, Key, OtherKey});
