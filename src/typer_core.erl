@@ -131,14 +131,9 @@ extract(#analysis{macros = Macros,
     %% Process remote types
     NewCodeServer =
         try
-            CodeServer2 =
-                dialyzer_utils:merge_types(CodeServer1,
-                                           TrustPLT), % XXX change to the PLT?
+            CodeServer2 = dialyzer_utils:merge_types(CodeServer1, TrustPLT),
             NewExpTypes = dialyzer_codeserver:get_temp_exported_types(CodeServer1),
-            case sets:size(NewExpTypes) of
-                0 ->
-                    ok
-            end,
+            0 = sets:size(NewExpTypes),
             CodeServer3 = dialyzer_codeserver:finalize_exported_types(NewExpTypes, CodeServer2),
             CodeServer4 = dialyzer_utils:process_record_remote_types(CodeServer3),
             dialyzer_contracts:process_contract_remote_types(CodeServer4)
@@ -194,9 +189,9 @@ remove_external(CallGraph, PLT, Analysis) ->
     StrippedCG0.
 
 -spec get_external([{mfa(), mfa()}], dialyzer_plt:plt()) -> [mfa()].
-get_external(Exts, Plt) ->
+get_external(Exts, PLT) ->
     Fun = fun({_From, To = {M, F, A}}, Acc) ->
-             case dialyzer_plt:contains_mfa(Plt, To) of
+             case dialyzer_plt:contains_mfa(PLT, To) of
                  false ->
                      case erl_bif_types:is_known(M, F, A) of
                          true ->
@@ -508,7 +503,7 @@ remove_module_info(FunInfoList) ->
 write_typed_file(File, Info, #analysis{mode = Mode} = Analysis) ->
     msg(info, "      Processing file: ~tp", [File], Analysis),
     Dir = filename:dirname(File),
-    RootName =
+    Rootname =
         filename:basename(
             filename:rootname(File)),
     Ext = filename:extension(File),
@@ -517,7 +512,7 @@ write_typed_file(File, Info, #analysis{mode = Mode} = Analysis) ->
             write_typed_file(File, Info, File, Analysis);
         _ ->
             TyperAnnDir = filename:join(Dir, ?TYPER_ANN_DIR),
-            TmpNewFilename = lists:concat([RootName, ".ann", Ext]),
+            TmpNewFilename = lists:concat([Rootname, ".ann", Ext]),
             NewFileName = filename:join(TyperAnnDir, TmpNewFilename),
             case file:make_dir(TyperAnnDir) of
                 {error, Reason} ->
@@ -690,8 +685,8 @@ analyze_result({macros, Macros}, Args, Analysis) ->
     {Args, Analysis#analysis{macros = Macros}};
 analyze_result({includes, Includes}, Args, Analysis) ->
     {Args, Analysis#analysis{includes = Includes}};
-analyze_result({plt, Plt}, Args, Analysis) ->
-    {Args, Analysis#analysis{plt = Plt}};
+analyze_result({plt, PLT}, Args, Analysis) ->
+    {Args, Analysis#analysis{plt = PLT}};
 analyze_result({show_succ, Value}, Args, Analysis) ->
     {Args, Analysis#analysis{show_succ = Value}};
 analyze_result({no_spec, Value}, Args, Analysis) ->
