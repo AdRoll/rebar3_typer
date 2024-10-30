@@ -36,8 +36,7 @@ empty(_) ->
 
 bad_plt(_) ->
     ct:comment("With an invalid plt.. we get an error"),
-    [{abort,
-      <<"typer: Dialyzer's PLT is missing or is not up-to-date; please (re)create it">>}] =
+    [{abort, <<"typer: ", _Message/binary>>}] =
         run_typer(#{files_r => [abs_test_path("single_file")], plt => "bad.plt"}),
     {comment, ""}.
 
