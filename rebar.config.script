@@ -1,0 +1,10 @@
+case string:to_integer(
+    erlang:system_info(otp_release))
+of
+    {N, _} when N >= 26 ->
+        {value, {dialyzer, DOpts}, Config} = lists:keytake(dialyzer, 1, CONFIG),
+        {value, {warnings, Warnings}, OtherDOpts} = lists:keytake(warnings, 1, DOpts),
+        [{dialyzer, [{warnings, [no_unknown | Warnings]} | OtherDOpts]} | Config];
+    _ ->
+        CONFIG
+end.
